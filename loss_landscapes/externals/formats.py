@@ -10,14 +10,14 @@ UNRECOGNIZED_LIBRARY_MSG = 'Could not determine the model\'s numerical computati
                            + 'model and/or your parameter vectors to loss-landscapes.'
 
 
-def determine_library(model, *args):
+def determine_library(*args):
     """
     Returns a string flag representing the numerical computation library from which the
     model and the parameters have originated. Returns None if undetermined.
     """
-    if isinstance(model, torch.nn.Module):
-        for parameters in args:
-            if not _is_torch_state(parameters):
+    if isinstance(args[0], torch.nn.Module):
+        for model in args[1:]:
+            if not isinstance(model, torch.nn.Module):
                 raise ValueError(UNRECOGNIZED_LIBRARY_MSG)
         return 'torch'
     else:
