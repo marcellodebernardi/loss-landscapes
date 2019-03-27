@@ -3,11 +3,11 @@ import torch.nn
 
 SUPPORTED_LIBRARIES = ['pytorch']
 UNRECOGNIZED_LIBRARY_MSG = 'Could not determine the model\'s numerical computation library of origin. ' \
-                           + 'The library or library version is unsupported, or the model and its ' \
-                           + 'parameters were passed incorrectly to loss-landscapes.' \
-                           + 'Supported libraries include ' + str(SUPPORTED_LIBRARIES) \
-                           + '. Check the documentation for how to correctly pass your ' \
-                           + 'model and/or your parameter vectors to loss-landscapes.'
+                           + 'The library or library version is unsupported, or the models ' \
+                           + 'were passed incorrectly to loss-landscapes. ' \
+                           + 'Supported libraries include ' + str(SUPPORTED_LIBRARIES) + '. '\
+                           + 'Check the documentation for how to correctly pass your ' \
+                           + 'model to loss-landscapes.'
 
 
 def determine_library(*args):
@@ -16,9 +16,9 @@ def determine_library(*args):
     model and the parameters have originated. Returns None if undetermined.
     """
     if isinstance(args[0], torch.nn.Module):
-        for model in args[1:]:
+        for model in args:
             if not isinstance(model, torch.nn.Module):
-                raise ValueError(UNRECOGNIZED_LIBRARY_MSG)
+                raise ValueError(UNRECOGNIZED_LIBRARY_MSG + 'Expected torch.nn.Module, got ' + str(type(model)))
         return 'torch'
     else:
         raise ValueError(UNRECOGNIZED_LIBRARY_MSG)

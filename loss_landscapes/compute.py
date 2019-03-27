@@ -1,5 +1,5 @@
 import copy
-from .externals.formats import determine_library
+from .utils.formats import determine_library
 import loss_landscapes.backends.torch.compute
 import loss_landscapes.backends.torch.ops
 
