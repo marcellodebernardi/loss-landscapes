@@ -1,7 +1,7 @@
 import copy
-from externals.formats import determine_library
-import backends.torch.compute
-import backends.torch.ops
+from .externals.formats import determine_library
+from . import backends as backends
+
 
 NOT_SUPPORTED_MSG = 'The model state provided is from a numerical computation library that is not supported.'
 SUPPORTED_NORMS = ['filter', 'layer', 'model', None]
@@ -184,8 +184,9 @@ def _compute_line(model, direction, distance, steps, evaluation_f, library):
 def _compute_plane(model, direction_one, direction_two, distance_one, distance_two, steps, evaluation_f, library,
                    center=False):
     if library == 'torch':
-        return backends.torch.compute.plane(model, direction_one, direction_two, distance_one, distance_two, steps,
-                                            evaluation_f, center)
+        return backends.torch.compute.plane(model, direction_one, direction_two, distance_one,
+                                                            distance_two, steps,
+                                                            evaluation_f, center)
     else:
         raise ValueError('Invalid library flag ' + str(library) + ' passed to _compute_plane')
 
