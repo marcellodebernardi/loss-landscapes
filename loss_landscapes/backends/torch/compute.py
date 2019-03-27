@@ -1,7 +1,7 @@
 import torch
 import torch.nn
 import numpy as np
-import backends.torch.ops as ops
+import loss_landscapes.backends.torch.ops as ops
 
 
 def line(model, direction, distance, steps, evaluation) -> np.ndarray:
