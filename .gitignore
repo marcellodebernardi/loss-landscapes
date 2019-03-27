@@ -8,3 +8,6 @@ data/
 
 # jupyter notebook checkpoints
 .ipynb_checkpoints/
+
+# pip
+loss_landscapes.egg-info/
