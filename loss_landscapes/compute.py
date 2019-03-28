@@ -130,7 +130,8 @@ def random_plane(model, evaluation_f, distance=1, steps=100, normalization=None,
         direction_two = _get_advanced_normalized_vector(direction_two, model_parameters, normalization, library)
 
     # compute and return losses
-    return _compute_plane(model_copy, direction_one, direction_two, distance, steps, evaluation_f, library, center)
+    return _compute_plane(model_copy, direction_one, direction_two, distance, distance, steps, evaluation_f, library,
+                          center)
 
 
 def planar_interpolation(model_start, model_end_one, model_end_two, evaluation_f, steps=100):
