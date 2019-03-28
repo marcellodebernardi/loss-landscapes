@@ -81,7 +81,7 @@ def vector_addition__(target_vector, vector):
     _check_inputs(target_vector, vector)
 
     for p_target, p in zip(target_vector, vector):
-        p_target += p
+        p_target.add_(p)
 
 
 def vector_subtraction__(target_vector, vector):
@@ -89,7 +89,7 @@ def vector_subtraction__(target_vector, vector):
     _check_inputs(target_vector, vector)
 
     for p_target, p in zip(target_vector, vector):
-        p_target += p
+        p_target -= p
 
 
 def scalar_multiplication__(target_vector, scalar):
@@ -97,7 +97,7 @@ def scalar_multiplication__(target_vector, scalar):
     _check_inputs(target_vector)
 
     for p in target_vector:
-        p *= scalar
+        p.mul_(scalar)
 
 
 def scalar_division__(target_vector, scalar):
@@ -105,16 +105,13 @@ def scalar_division__(target_vector, scalar):
     _check_inputs(target_vector)
 
     for p in target_vector:
-        p /= scalar
+        p.div_(scalar)
 
 
 def unit_vector__(target_vector):
     # check for bad input
     _check_inputs(target_vector)
-
-    length = l2_norm(target_vector)
-    for p in target_vector:
-        p /= length
+    scalar_division__(target_vector, l2_norm(target_vector))
 
 
 def unrequire_grad__(model: torch.nn.Module):
@@ -123,11 +120,14 @@ def unrequire_grad__(model: torch.nn.Module):
 
 
 def _check_inputs(*args):
-    length = len(args[0])
+    # input may be a generator in the case of model.parameters() being used in-place
+    vectors = [list(x) for x in args]
+
+    length = len(vectors[0])
 
     if length == 0:
         raise ValueError(EMPTY_PARAMETER_LIST)
 
-    for vector in args[1:]:
+    for vector in vectors[1:]:
         if len(vector) != length:
             raise ValueError(MISMATCHED_PARAMETER_LENGTH)

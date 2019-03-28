@@ -71,7 +71,7 @@ def sample_uniform_like(source_parameters, unit_vector=True) -> list:
     for p in source_parameters:
         new_vector.append(torch.nn.Parameter(torch.rand_like(p, requires_grad=False), requires_grad=False))
 
-    return ops.unit_vector__(new_vector) if unit_vector else new_vector
+    return ops.unit_vector(new_vector) if unit_vector else new_vector
 
 
 def get_normalized_vector(direction, model_parameters, norm_type) -> list:
