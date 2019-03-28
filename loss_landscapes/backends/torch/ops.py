@@ -1,7 +1,10 @@
 """
-Defines basic linear algebra operations on lists of torch.nn.Parameter objects.
-Such lists are the data structure used by PyTorch to store the parameters of
-a neural network.
+Basic linear algebra operations as defined on lists of torch.nn.Parameter objects.
+
+For PyTorch, we extract the model's parameters by constructing a list out of the
+generator returned by torch.nn.Module.parameters(). We can think of this list as
+a single vector consisting of all the individual parameter values. The functions
+in this module implement basic linear algebra operations on such lists.
 """
 
 
@@ -15,6 +18,7 @@ MISMATCHED_PARAMETER_LENGTH = 'The two parameters lists have mismatched lengths.
 
 
 def l2_norm(vector) -> float:
+    """ Return the L2 norm of a vector. """
     # check for bad inputs
     _check_inputs(vector)
 
@@ -27,6 +31,7 @@ def l2_norm(vector) -> float:
 
 
 def vector_addition(vector_a, vector_b) -> list:
+    """ Construct a new list of Parameters out of the addition of vector_a and vector_b. """
     # check for bad input
     _check_inputs(vector_a, vector_b)
 
@@ -39,6 +44,7 @@ def vector_addition(vector_a, vector_b) -> list:
 
 
 def vector_subtraction(vector_a, vector_b) -> list:
+    """ Construct a new list of Parameters out of the subtraction of vector_b from vector_a. """
     # check for bad input
     _check_inputs(vector_a, vector_b)
 
@@ -51,6 +57,7 @@ def vector_subtraction(vector_a, vector_b) -> list:
 
 
 def scalar_multiplication(vector, scalar) -> list:
+    """ Construct a new list of Parameters out of the multiplication of a given vector by a scalar. """
     # check for bad input
     _check_inputs(vector)
 
@@ -63,6 +70,7 @@ def scalar_multiplication(vector, scalar) -> list:
 
 
 def scalar_division(vector, scalar) -> list:
+    """ Construct a new list of Parameters out of the division of a given vector by a scalar. """
     # check for bad input
     _check_inputs(vector)
 
@@ -70,6 +78,7 @@ def scalar_division(vector, scalar) -> list:
 
 
 def unit_vector(vector) -> list:
+    """ Construct a unit vector pointing in the direction of the given vector. """
     # check for bad input
     _check_inputs(vector)
 
@@ -77,6 +86,7 @@ def unit_vector(vector) -> list:
 
 
 def vector_addition__(target_vector, vector):
+    """ Modify the target vector in-place by adding the other vector to it. """
     # check for bad input
     _check_inputs(target_vector, vector)
 
@@ -85,6 +95,7 @@ def vector_addition__(target_vector, vector):
 
 
 def vector_subtraction__(target_vector, vector):
+    """ Modify the target vector in-place by subtracting the other vector from it. """
     # check for bad input
     _check_inputs(target_vector, vector)
 
@@ -93,6 +104,7 @@ def vector_subtraction__(target_vector, vector):
 
 
 def scalar_multiplication__(target_vector, scalar):
+    """ Modify the target vector in-place by multiplying it by the given scalar. """
     # check for bad input
     _check_inputs(target_vector)
 
@@ -101,6 +113,7 @@ def scalar_multiplication__(target_vector, scalar):
 
 
 def scalar_division__(target_vector, scalar):
+    """ Modify the target vector in-place by dividing it by the given scalar. """
     # check for bad input
     _check_inputs(target_vector)
 
@@ -109,17 +122,20 @@ def scalar_division__(target_vector, scalar):
 
 
 def unit_vector__(target_vector):
+    """ Modify the target vector in-place, turning it into a unit vector pointing in the same direction. """
     # check for bad input
     _check_inputs(target_vector)
     scalar_division__(target_vector, l2_norm(target_vector))
 
 
 def unrequire_grad__(model: torch.nn.Module):
+    """ Modify the given torch model by specifying that its parameters do not require autograd. """
     for p in model.parameters():
         p.requires_grad = False
 
 
 def _check_inputs(*args):
+    """ Raises an error if the given vectors are not compatible. """
     # input may be a generator in the case of model.parameters() being used in-place
     vectors = [list(x) for x in args]
 

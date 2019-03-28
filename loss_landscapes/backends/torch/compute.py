@@ -14,6 +14,9 @@ def line(model, direction, distance, steps, evaluation) -> np.ndarray:
         distance: distance along direction to reach
         steps: how many steps along direction to reach distance
         evaluation: model evaluation function
+
+    Returns:
+        np.ndarray: loss values along line
     """
     # set all parameters in the model to not require gradients, which allows
     # using torch operations on the parameters
@@ -42,6 +45,9 @@ def plane(model, direction_one, direction_two, distance_one, distance_two, steps
         steps: how many steps along direction to reach distance
         evaluation: model evaluation function
         center: whether the start point should be the top-left or central point of the plane
+
+    Returns:
+        np.ndarray: loss values along plane
     """
     # set all parameters in the model to not require gradients, which allows
     # using torch operations on the parameters
@@ -75,6 +81,7 @@ def sample_uniform_like(source_parameters, unit_vector=True) -> list:
 
 
 def get_normalized_vector(direction, model_parameters, norm_type) -> list:
+    # selects the correct normalization method
     if norm_type == 'filter':
         return _get_filter_normalized(direction, model_parameters)
     elif norm_type == 'layer':
@@ -84,7 +91,7 @@ def get_normalized_vector(direction, model_parameters, norm_type) -> list:
 
 
 def _get_filter_normalized(direction, model_parameters) -> list:
-    """ Applies filter normalization to a direction vector """
+    # Constructs the filter-normalized version of the direction vector using the model parameters.
     normalized_vector = []
 
     # iterate over every layer's every filter
@@ -106,8 +113,10 @@ def _get_filter_normalized(direction, model_parameters) -> list:
 
 
 def _get_layer_normalized(direction, model_parameters) -> list:
-    pass
+    # todo
+    raise NotImplementedError()
 
 
 def _get_model_normalized(direction, model_parameters) -> list:
-    pass
+    # todo
+    raise NotImplementedError()
