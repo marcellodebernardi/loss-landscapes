@@ -14,7 +14,7 @@ required.
 
 import copy
 import numpy as np
-from .utils.formats import determine_library
+import loss_landscapes.utils.formats
 import loss_landscapes.backends.torch.compute
 import loss_landscapes.backends.torch.ops
 
@@ -66,7 +66,7 @@ def random_line(start_model, evaluation_f, distance=1, steps=100, normalization=
         np.ndarray: 1-d array of loss values along the randomly sampled direction
     """
     # determine which library the user has,
-    library = determine_library(start_model)
+    library = loss_landscapes.utils.formats.determine_library(start_model)
 
     # avoid aliasing issues by working on fresh copies
     model_copy = copy.deepcopy(start_model)
@@ -121,7 +121,7 @@ def linear_interpolation(model_start, model_end, evaluation_f, steps=100) -> np.
     Returns:
         np.ndarray: 1-d array of loss values along the line connecting start and end models
     """
-    library = determine_library(model_start, model_end)
+    library = loss_landscapes.utils.formats.determine_library(model_start, model_end)
 
     # avoid aliasing issues by working on fresh copies
     model_start_copy = copy.deepcopy(model_start)
@@ -179,7 +179,7 @@ def random_plane(model_start, evaluation_f, distance=1, steps=100, normalization
     Returns:
         np.ndarray: 1-d array of loss values along the line connecting start and end models
     """
-    library = determine_library(model_start)
+    library = loss_landscapes.utils.formats.determine_library(model_start)
 
     # avoid aliasing issues by working on fresh copies
     model_copy = copy.deepcopy(model_start)
@@ -239,7 +239,7 @@ def planar_interpolation(model_start, model_end_one, model_end_two, evaluation_f
     Returns:
         np.ndarray: 1-d array of loss values along the line connecting start and end models
     """
-    library = determine_library(model_start, model_end_two, model_end_two)
+    library = loss_landscapes.utils.formats.determine_library(model_start, model_end_two, model_end_two)
 
     # avoid aliasing issues by working on fresh copies
     model_start_copy = copy.deepcopy(model_start)
