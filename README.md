@@ -55,6 +55,4 @@ Future versions will increase the number of loss landscapes that are computable,
 to TensorFlow, scikit-learn, and more.
 
 ## Installation
-The package will be uploaded on PyPI once it is sufficiently developed. Up to that point, it can be installed
-by cloning this repository, and running `pip install -e ./loss-landscapes/`, where `loss-landscapes` is the
-directory this repository was cloned into.
+The package is available on PyPI. Install using `pip install loss-landscapes`.
