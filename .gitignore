@@ -11,3 +11,6 @@ data/
 
 # pip
 loss_landscapes.egg-info/
+
+# dist
+dist/
