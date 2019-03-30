@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 
 
 class Backend(ABC):
+    """ A Backend object provides the back-end specific definitions of the following base computations. """
     @abstractmethod
     def line(self, model, direction, distance, steps, evaluation_f, agent=None, model_set_f=None) -> np.ndarray:
         raise NotImplementedError()
