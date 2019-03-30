@@ -33,15 +33,12 @@ def random_line(start_model, evaluation_f, distance=1, steps=100, normalization=
         and must specify a procedure whereby the model passed to it is evaluated on the
         task of interest, returning the resulting loss.
 
-        Args:
-            start_model: model to be evaluated, whose current parameters represent the start point
-            evaluation_f: function of form evaluation_f(model), used to evaluate model loss
-            distance: maximum distance in parameter space from the start point
-            steps: at how many steps from start to end the model is evaluated
-            normalization: normalization of direction vector, must be one of 'filter', 'layer', 'model'
-
-        Returns:
-            np.ndarray: 1-d array of loss values along the randomly sampled direction
+        :param start_model: model to be evaluated, whose current parameters represent the start point
+        :param evaluation_f: function of form evaluation_f(model), used to evaluate model loss
+        :param distance: maximum distance in parameter space from the start point
+        :param steps: at how many steps from start to end the model is evaluated
+        :param normalization: normalization of direction vector, must be one of 'filter', 'layer', 'model'
+        :return: 1-d array of loss values along the randomly sampled direction
         """
     return loss_landscapes.compute.compute_random_line(start_model, evaluation_f, distance, steps, normalization)
 
@@ -73,14 +70,11 @@ def linear_interpolation(model_start, model_end, evaluation_f, steps=100):
         and must specify a procedure whereby the model passed to it is evaluated on the
         task of interest, returning the resulting loss.
 
-        Args:
-            model_start: the model defining the start point of the line in parameter space
-            model_end: the model defining the end point of the line in parameter space
-            evaluation_f: function of form evaluation_f(model), used to evaluate model loss
-            steps: at how many steps from start to end the model is evaluated
-
-        Returns:
-            np.ndarray: 1-d array of loss values along the line connecting start and end models
+        :param model_start: the model defining the start point of the line in parameter space
+        :param model_end: the model defining the end point of the line in parameter space
+        :param evaluation_f: function of form evaluation_f(model), used to evaluate model loss
+        :param steps: at how many steps from start to end the model is evaluated
+        :return: 1-d array of loss values along the line connecting start and end models
         """
     return loss_landscapes.compute.compute_linear_interpolation(model_start, model_end, evaluation_f, steps)
 
@@ -117,16 +111,13 @@ def random_plane(model_start, evaluation_f, distance=1, steps=100, normalization
     and must specify a procedure whereby the model passed to it is evaluated on the
     task of interest, returning the resulting loss.
 
-    Args:
-        model_start: the model defining the origin point of the plane in parameter space
-        evaluation_f: function of form evaluation_f(model), used to evaluate model loss
-        distance: maximum distance in parameter space from the start point
-        steps: at how many steps from start to end the model is evaluated
-        normalization: normalization of direction vectors, must be one of 'filter', 'layer', 'model'
-        center: whether the start point is used as the central point or the start point
-
-    Returns:
-        np.ndarray: 1-d array of loss values along the line connecting start and end models
+        :param model_start: the model defining the origin point of the plane in parameter space
+        :param evaluation_f: function of form evaluation_f(model), used to evaluate model loss
+        :param distance: maximum distance in parameter space from the start point
+        :param steps: at how many steps from start to end the model is evaluated
+        :param normalization: normalization of direction vectors, must be one of 'filter', 'layer', 'model'
+        :param center: whether the start point is used as the central point or the start point
+        :return: 1-d array of loss values along the line connecting start and end models
     """
     return loss_landscapes.compute.compute_random_plane(model_start, evaluation_f, distance, steps, normalization,
                                                         center, None, None)
@@ -162,15 +153,12 @@ def planar_interpolation(model_start, model_end_one, model_end_two, evaluation_f
     and must specify a procedure whereby the model passed to it is evaluated on the
     task of interest, returning the resulting loss.
 
-    Args:
-        model_start: the model defining the origin point of the plane in parameter space
-        model_end_one: the model representing the end point of the first direction defining the plane
-        model_end_two: the model representing the end point of the second direction defining the plane
-        evaluation_f: function of form evaluation_f(model), used to evaluate model loss
-        steps: at how many steps from start to end the model is evaluated
-
-    Returns:
-        np.ndarray: 1-d array of loss values along the line connecting start and end models
+        :param model_start: the model defining the origin point of the plane in parameter space
+        :param model_end_one: the model representing the end point of the first direction defining the plane
+        :param model_end_two: the model representing the end point of the second direction defining the plane
+        :param evaluation_f: function of form evaluation_f(model), used to evaluate model loss
+        :param steps: at how many steps from start to end the model is evaluated
+        :return: 1-d array of loss values along the line connecting start and end models
     """
     return loss_landscapes.compute.compute_planar_interpolation(model_start, model_end_one, model_end_two, evaluation_f,
                                                                 steps, None, None)
