@@ -7,6 +7,7 @@ by client-facing functions in other modules, and in turns relies on a 'backend_d
 to dynamically select the right backend code to carry out its basic operations.
 """
 
+
 import copy
 import numpy as np
 import loss_landscapes.backends.backend_dispatch as backend_dispatch
@@ -14,13 +15,13 @@ import loss_landscapes.utils.formats
 import loss_landscapes.backends.torch.backend
 import loss_landscapes.backends.torch.ops
 
+
 NOT_SUPPORTED_MSG = 'The model state provided is from a numerical computation library that is not supported.'
 SUPPORTED_NORMS = ['filter', 'layer', 'model', None]
 SUPPORTED_LIBRARIES = ['pytorch']
 TORCH_BACKEND = loss_landscapes.backends.torch.backend.TorchBackend()
 
 
-# library-agnostic description of computing a random line using the backend_dispatch module
 def compute_random_line(start_model, evaluation_f, distance=1, steps=100, normalization=None, agent=None,
                         model_set_f=None) -> np.ndarray:
     """ Compute a random line, either for just a model, or for an agent wrapping a model. """
@@ -45,7 +46,6 @@ def compute_random_line(start_model, evaluation_f, distance=1, steps=100, normal
                                          model_set_f)
 
 
-# library-agnostic description of computing a linear interpolation using the backend_dispatch module
 def compute_linear_interpolation(model_start, model_end, evaluation_f, steps=100, agent=None,
                                  model_set_f=None) -> np.ndarray:
     """ Compute a linear interpolation, either for just a model, or for an agent wrapping a model. """
