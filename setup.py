@@ -7,7 +7,7 @@ with open(path.join(path.abspath(path.dirname(__file__)), 'README.md'), encoding
 
 setup(
     name='loss_landscapes',
-    version='0.2.0',
+    version='0.3.0',
     packages=['loss_landscapes'],
     url='https://github.com/marcellodebernardi/loss-landscapes',
     license='MIT',
