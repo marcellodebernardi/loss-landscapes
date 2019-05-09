@@ -185,6 +185,13 @@ class ParameterVector:
     def _filter_norms(self, order=2):
         raise NotImplementedError()
 
+    def numpy(self) -> np.ndarray:
+        """
+        Returns parameters as a flat (vector-shaped) numpy array.
+        :return:  numpy array
+        """
+        return np.concatenate([p.flatten() for p in self.parameters])
+
 
 def add(vector_a: ParameterVector, vector_b: ParameterVector):
     if isinstance(vector_a, ParameterVector) and isinstance(vector_b, ParameterVector):
