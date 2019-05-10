@@ -51,4 +51,4 @@ class ModelWrapper:
         new_state_dict = dict()
         for i in range(len(new_parameters)):
             new_state_dict[self.torch_keys[i]] = copy.deepcopy(new_parameters[i])
-        self.model.load_dict(new_state_dict)
+        self.model.load_state_dict(new_state_dict)
