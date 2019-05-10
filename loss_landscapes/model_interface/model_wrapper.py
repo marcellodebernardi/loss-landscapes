@@ -16,13 +16,12 @@ class ModelWrapper:
             raise ValueError('Model is not a subclass of torch.nn.Module.')
 
         self.model = model
-        self.torch_keys = sorted(self.model.state_dict().keys())
+        self.names = []
 
-        # remove keys referring to persistent buffers and other non-parameter contents
-        for idx in range(len(self.torch_keys) - 1, -1, -1):
-            key = self.torch_keys[idx]
-            if not isinstance(self.model.state_dict()[key], torch.nn.parameter.Parameter):
-                self.torch_keys.pop(idx)
+        for name, _ in self.model.named_parameters():
+            self.names.append(name)
+
+        self.names.sort()
 
     def get_model(self):
         """
@@ -38,8 +37,9 @@ class ModelWrapper:
         """
         parameters = []
         # use keys from stored key list to ensure list is consistently ordered
-        for key in self.torch_keys:
-            parameters.append(copy.deepcopy(self.model.state_dict()[key]))
+        state_dict = self.model.state_dict()
+        for name in self.names:
+            parameters.append(copy.deepcopy(state_dict[name]))
         return ParameterVector(parameters)
 
     def set_parameters(self, new_parameters: ParameterVector):
@@ -48,7 +48,7 @@ class ModelWrapper:
         :param new_parameters: list of numpy arrays
         :return: none
         """
-        new_state_dict = dict()
-        for i in range(len(new_parameters)):
-            new_state_dict[self.torch_keys[i]] = copy.deepcopy(new_parameters[i])
+        new_state_dict = copy.deepcopy(self.model.state_dict())
+        for idx, p in enumerate(new_parameters, 0):
+            new_state_dict[self.names[idx]] = copy.deepcopy(p)
         self.model.load_state_dict(new_state_dict)
