@@ -3,8 +3,8 @@ Functions for approximating landscapes in one and two dimensions.
 """
 
 import copy
-import model_interface.parameter_vector as pv
-from model_interface.model_wrapper import ModelWrapper
+import loss_landscapes.model_interface.parameter_vector as pv
+from loss_landscapes.model_interface.model_wrapper import ModelWrapper
 from loss_landscapes.evaluators.evaluator import Evaluator
 
 

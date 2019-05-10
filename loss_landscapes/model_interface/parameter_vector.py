@@ -9,37 +9,37 @@ The operations defined in the module follow the PyTorch convention of appending
 the '__' suffix to the name of in-place operations.
 """
 
-
 import math
 import copy
+import torch
+import torch.nn
 import numpy as np
-
 
 EMPTY_PARAMETER_LIST = 'The parameter list is empty.'
 MISMATCHED_PARAMETER_LENGTH = 'The two parameters lists have mismatched lengths.'
 
 
 def _are_same_size_vectors(vector_a, vector_b) -> bool:
-    return isinstance(vector_a, ParameterVector) and isinstance(vector_b, ParameterVector) \
-           and len(vector_a) == len(vector_b)
+    """ Returns true if the given vectors are fully compatible for addition and subtraction. """
+    return isinstance(vector_a, ParameterVector) \
+           and isinstance(vector_b, ParameterVector) \
+           and len(vector_a) == len(vector_b) \
+           and all(isinstance(p, torch.nn.parameter.Parameter) for p in vector_a + vector_b) \
+           and all(pair[0].size() == pair[1].size() for pair in zip([vector_a, vector_b]))
 
 
 def _is_scalar(scalar) -> bool:
-    if isinstance(scalar, int) or isinstance(scalar, float):
-        return True
+    return isinstance(scalar, int) or isinstance(scalar, float)
 
 
 class ParameterVector:
-    # todo make custom error for incompatible vectors etc
     def __init__(self, parameters: list):
-        self.parameters = None
-
-        if isinstance(parameters, list) and isinstance(parameters[0], np.ndarray):
-            self.parameters = parameters
-        else:
+        if not isinstance(parameters, list) and all(isinstance(p, torch.nn.parameter.Parameter) for p in parameters):
             raise AttributeError('Argument to ParameterVector is not a list of numpy arrays.')
 
-    def get_list(self):
+        self.parameters = parameters
+
+    def get_parameters(self) -> list:
         """ Returns the underlying list instance. """
         return self.parameters
 
@@ -48,7 +48,7 @@ class ParameterVector:
         return len(self.parameters)
 
     def __getitem__(self, index):
-        """ Returns the numpy array at the given index in the ParameterVector list. """
+        """ Returns the torch tensor at the given index in the Parameter list. """
         return self.parameters[index]
 
     def __add__(self, other):
@@ -171,7 +171,7 @@ class ParameterVector:
         n = 0.0
         # collect sum of n-th power of all parameters
         for parameter in self.parameters:
-            n += np.power(parameter, order).sum()
+            n += torch.pow(parameter, order).sum().item()
         # return n-th root of the above sum
         return math.pow(n, 1.0 / order)
 
