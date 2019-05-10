@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 import torch.autograd
 from loss_landscapes.evaluators.evaluator import Evaluator
-from model_interface.model_wrapper import ModelWrapper
+from loss_landscapes.model_interface.model_wrapper import ModelWrapper
 
 
 class SupervisedTorchEvaluator(Evaluator, ABC):

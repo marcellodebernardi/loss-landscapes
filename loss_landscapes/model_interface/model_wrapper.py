@@ -3,7 +3,7 @@ Defines functions for getting and setting the parameters of a model.
 """
 
 import copy
-from model_interface.parameter_vector import ParameterVector
+from loss_landscapes.model_interface.parameter_vector import ParameterVector
 
 SUPPORTED = {
     'torch.nn.Module': 'torch',

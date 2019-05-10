@@ -1,9 +1,13 @@
+"""
+Classes and functions for tracking a model's optimization trajectory and computing
+a low-dimensional approximation of the trajectory.
+"""
 
 
 import numpy as np
-import model_interface.parameter_vector as pv
-from model_interface.parameter_vector import ParameterVector
-from model_interface.model_wrapper import ModelWrapper
+import loss_landscapes.model_interface.parameter_vector as pv
+from loss_landscapes.model_interface.parameter_vector import ParameterVector
+from loss_landscapes.model_interface.model_wrapper import ModelWrapper
 
 
 class TrajectoryTracker:

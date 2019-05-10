@@ -8,15 +8,17 @@ et al.'s Automated Nudged Elastic Band algorithm.
 import abc
 import copy
 import numpy as np
-from model_interface.model_wrapper import ModelWrapper
+from loss_landscapes.model_interface.model_wrapper import ModelWrapper
 
 
 class _ParametricCurve(abc.ABC):
     """ A _ParametricCurve is used in the Garipov path search algorithm. """
+    # todo
 
 
 class _PolygonChain(_ParametricCurve):
     """ A _ParametricCurve consisting of consecutive line segments. """
+    # todo
     pass
 
 
@@ -63,6 +65,7 @@ class _BezierCurve(_ParametricCurve):
                 self.control_points.append(model_template_wrapper)
 
     def fit(self):
+        # todo
         raise NotImplementedError()
 
 
@@ -89,17 +92,10 @@ def garipov_curve_search(model_a, model_b, curve_type='polygon_chain') -> np.nda
     point_a = model_a_wrapper.build_parameter_vector()
     point_b = model_b_wrapper.build_parameter_vector()
 
+    # todo
     if curve_type == 'polygon_chain':
         raise NotImplementedError('Not implemented yet.')
     elif curve_type == 'bezier_curve':
         raise NotImplementedError('Not implemented yet.')
     else:
         raise AttributeError('Curve type is not polygon_chain or bezier_curve.')
-
-
-def find_saddle_point() -> np.ndarray:
-    """ Gradient traversal to find saddle points, inspired by https://arxiv.org/abs/1406.2572 """
-    raise NotImplementedError()
-
-
-
