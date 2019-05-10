@@ -19,11 +19,10 @@ class ModelWrapper:
         self.torch_keys = sorted(self.model.state_dict().keys())
 
         # remove keys referring to persistent buffers and other non-parameter contents
-        for idx in range(len(self.torch_keys)):
+        for idx in range(len(self.torch_keys) - 1, -1, -1):
             key = self.torch_keys[idx]
             if not isinstance(self.model.state_dict()[key], torch.nn.parameter.Parameter):
                 self.torch_keys.pop(idx)
-                idx -= 1
 
     def get_model(self):
         """
