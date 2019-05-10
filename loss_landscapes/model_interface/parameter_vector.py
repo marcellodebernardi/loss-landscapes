@@ -26,7 +26,7 @@ def _are_same_size_vectors(vector_a, vector_b) -> bool:
            and len(vector_a) == len(vector_b) \
            and all(isinstance(p, torch.nn.parameter.Parameter) for p in vector_a) \
            and all(isinstance(p, torch.nn.parameter.Parameter) for p in vector_b) \
-           and all(pair[0].size() == pair[1].size() for pair in zip([vector_a, vector_b]))
+           and all(pair[0].size() == pair[1].size() for pair in zip(vector_a.get_parameters(), vector_b.get_parameters()))
 
 
 def _is_scalar(scalar) -> bool:
