@@ -3,9 +3,8 @@ Functions for approximating landscapes in one and two dimensions.
 """
 
 import copy
-import numpy as np
-import loss_landscapes.utils.parameter_vector as pv
-from loss_landscapes.utils.model_interface import ModelInterface
+import model_interface.parameter_vector as pv
+from model_interface.model_wrapper import ModelWrapper
 from loss_landscapes.evaluators.evaluator import Evaluator
 
 
@@ -56,8 +55,8 @@ def linear_interpolation(model_start, model_end, evaluator: Evaluator, steps=100
     :return: 1-d array of loss values along the line connecting start and end models
     """
     # create wrappers from deep copies to avoid aliasing
-    start_model_wrapper = ModelInterface(copy.deepcopy(model_start))
-    end_model_wrapper = ModelInterface(copy.deepcopy(model_end))
+    start_model_wrapper = ModelWrapper(copy.deepcopy(model_start))
+    end_model_wrapper = ModelWrapper(copy.deepcopy(model_end))
 
     start_point = start_model_wrapper.build_parameter_vector()
     end_point = end_model_wrapper.build_parameter_vector()
@@ -108,7 +107,7 @@ def random_line(model_start, evaluator: Evaluator, distance=1, steps=100, normal
     :return: 1-d array of loss values along the randomly sampled direction
     """
     # create wrappers from deep copies to avoid aliasing
-    model_start_wrapper = ModelInterface(copy.deepcopy(model_start))
+    model_start_wrapper = ModelWrapper(copy.deepcopy(model_start))
 
     # obtain start point in parameter space and random direction
     # random direction is randomly sampled, then normalized, and finally scaled by distance/steps
@@ -171,9 +170,9 @@ def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: E
     :param steps: at how many steps from start to end the model is evaluated
     :return: 1-d array of loss values along the line connecting start and end models
     """
-    model_start_wrapper = ModelInterface(copy.deepcopy(model_start))
-    model_end_one_wrapper = ModelInterface(copy.deepcopy(model_end_one))
-    model_end_two_wrapper = ModelInterface(copy.deepcopy(model_end_two))
+    model_start_wrapper = ModelWrapper(copy.deepcopy(model_start))
+    model_end_one_wrapper = ModelWrapper(copy.deepcopy(model_end_one))
+    model_end_two_wrapper = ModelWrapper(copy.deepcopy(model_end_two))
 
     # compute direction vectors
     start_point = model_start_wrapper.build_parameter_vector()
@@ -236,7 +235,7 @@ def random_plane(model_start, evaluator: Evaluator, distance=1, steps=20, normal
     :param center: whether the start point is used as the central point or the start point
     :return: 1-d array of loss values along the line connecting start and end models
     """
-    model_start_wrapper = ModelInterface(copy.deepcopy(model_start))
+    model_start_wrapper = ModelWrapper(copy.deepcopy(model_start))
 
     start_point = model_start_wrapper.build_parameter_vector()
     dir_one = pv.rand_u_like(start_point)

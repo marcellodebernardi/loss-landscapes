@@ -3,7 +3,7 @@ Defines functions for getting and setting the parameters of a model.
 """
 
 import copy
-from loss_landscapes.utils.parameter_vector import ParameterVector
+from model_interface.parameter_vector import ParameterVector
 
 SUPPORTED = {
     'torch.nn.Module': 'torch',
@@ -47,7 +47,7 @@ def _raise_unrecognized_model_error(model_type: str):
     )
 
 
-class ModelInterface:
+class ModelWrapper:
     """ Wraps a model and defines the operations for getting its weights or updating them. """
     def __init__(self, model):
         super().__init__()
