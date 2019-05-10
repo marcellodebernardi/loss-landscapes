@@ -6,9 +6,26 @@ import copy
 import numpy as np
 import loss_landscapes.utils.parameter_vector as pv
 from loss_landscapes.utils.model_interface import ModelInterface
+from loss_landscapes.evaluators.evaluator import Evaluator
 
 
-def linear_interpolation(model_start, model_end, evaluation_f, steps=100) -> np.ndarray:
+def point(model, evaluator: Evaluator) -> tuple:
+    """
+    Returns the computed value of the evaluation function applied to the model
+    at a specific point in parameter space.
+
+    The Evaluator supplied has to be a subclass of the evaluations.evaluator.Evaluator class,
+    and must specify a procedure whereby the model passed to it is evaluated on the
+    task of interest, returning the resulting quantity (such as loss, loss gradient, etc).
+
+    :param model: the model defining the point in parameter space
+    :param evaluator: list of function of form evaluation_f(model), used to evaluate model loss
+    :return: quantity specified by evaluation_f at point in parameter space
+    """
+    return evaluator(model)
+
+
+def linear_interpolation(model_start, model_end, evaluator: Evaluator, steps=100) -> list:
     """
     Returns the computed value of the evaluation function applied to the model 
     along a linear subspace of the parameter space defined by two end points.
@@ -28,16 +45,13 @@ def linear_interpolation(model_start, model_end, evaluation_f, steps=100) -> np.
     For more details, see `https://arxiv.org/abs/1712.09913v3`. It is recommended to
     use random_line() with filter normalization instead.
 
-    The evaluation function supplied has to be of the form
-
-        evaluation_function(model)
-
+    The Evaluator supplied has to be a subclass of the evaluations.evaluator.Evaluator class,
     and must specify a procedure whereby the model passed to it is evaluated on the
     task of interest, returning the resulting quantity (such as loss, loss gradient, etc).
 
     :param model_start: the model defining the start point of the line in parameter space
     :param model_end: the model defining the end point of the line in parameter space
-    :param evaluation_f: function of form evaluation_f(model), used to evaluate model loss
+    :param evaluator: list of function of form evaluation_f(model), used to evaluate model loss
     :param steps: at how many steps from start to end the model is evaluated
     :return: 1-d array of loss values along the line connecting start and end models
     """
@@ -53,12 +67,12 @@ def linear_interpolation(model_start, model_end, evaluation_f, steps=100) -> np.
     for i in range(steps):
         # add a step along the line to the model parameters, then evaluate
         start_model_wrapper.set_parameters(start_point + (direction * i))
-        data_values.append(evaluation_f(start_model_wrapper.get_model()))
+        data_values.append(evaluator(start_model_wrapper.get_model()))
 
-    return np.array(data_values)
+    return data_values
 
 
-def random_line(model_start, evaluation_f, distance=1, steps=100, normalization=None) -> np.ndarray:
+def random_line(model_start, evaluator: Evaluator, distance=1, steps=100, normalization=None) -> list:
     """
     Returns the computed value of the evaluation function applied to the model along a 
     linear subspace of the parameter space defined by a start point and a randomly sampled direction.
@@ -82,15 +96,12 @@ def random_line(model_start, evaluation_f, distance=1, steps=100, normalization=
     For more details, see `https://arxiv.org/abs/1712.09913v3`. It is recommended to
     normalize the direction, preferably with the 'filter' option.
 
-    The evaluation function supplied has to be of the form
-
-        evaluation_function(model)
-
+    The Evaluator supplied has to be a subclass of the evaluations.evaluator.Evaluator class,
     and must specify a procedure whereby the model passed to it is evaluated on the
-    task of interest, returning the resulting evaluation.
+    task of interest, returning the resulting quantity (such as loss, loss gradient, etc).
 
     :param model_start: model to be evaluated, whose current parameters represent the start point
-    :param evaluation_f: function of form evaluation_f(model), used to evaluate model loss
+    :param evaluator: function of form evaluation_f(model), used to evaluate model loss
     :param distance: maximum distance in parameter space from the start point
     :param steps: at how many steps from start to end the model is evaluated
     :param normalization: normalization of direction vector, must be one of 'filter', 'layer', 'model'
@@ -121,12 +132,12 @@ def random_line(model_start, evaluation_f, distance=1, steps=100, normalization=
     for i in range(steps):
         # add a step along the line to the model parameters, then evaluate
         model_start_wrapper.set_parameters(start_point + (direction * i))
-        data_values.append(evaluation_f(model_start_wrapper.get_model()))
+        data_values.append(evaluator(model_start_wrapper.get_model()))
 
-    return np.array(data_values)
+    return data_values
 
 
-def planar_interpolation(model_start, model_end_one, model_end_two, evaluation_f, steps=20) -> np.ndarray:
+def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: Evaluator, steps=20) -> list:
     """
     Returns the computed value of the evaluation function applied to the model along
     a planar subspace of the parameter space defined by a start point and two end points.
@@ -149,17 +160,14 @@ def planar_interpolation(model_start, model_end_one, model_end_two, evaluation_f
     could be another randomly initialized model, since in a high-dimensional space
     randomly sampled directions are most likely to be orthogonal.
 
-    The evaluation function supplied has to be of the form
-
-        evaluation_function(model)
-
+    The Evaluator supplied has to be a subclass of the evaluations.evaluator.Evaluator class,
     and must specify a procedure whereby the model passed to it is evaluated on the
-    task of interest, returning the resulting evaluation.
+    task of interest, returning the resulting quantity (such as loss, loss gradient, etc).
 
     :param model_start: the model defining the origin point of the plane in parameter space
     :param model_end_one: the model representing the end point of the first direction defining the plane
     :param model_end_two: the model representing the end point of the second direction defining the plane
-    :param evaluation_f: function of form evaluation_f(model), used to evaluate model loss
+    :param evaluator: function of form evaluation_f(model), used to evaluate model loss
     :param steps: at how many steps from start to end the model is evaluated
     :return: 1-d array of loss values along the line connecting start and end models
     """
@@ -182,16 +190,16 @@ def planar_interpolation(model_start, model_end_one, model_end_two, evaluation_f
         for j in range(steps):
             # set parameters and evaluate
             model_start_wrapper.set_parameters(start_point + (dir_two * j))
-            data_column.append(evaluation_f(model_start_wrapper.get_model()))
+            data_column.append(evaluator(model_start_wrapper.get_model()))
             # increment parameters
 
         data_matrix.append(data_column)
         start_point.add_(dir_one)
 
-    return np.array(data_matrix)
+    return data_matrix
 
 
-def random_plane(model_start, evaluation_f, distance=1, steps=20, normalization=None, center=True) -> np.ndarray:
+def random_plane(model_start, evaluator: Evaluator, distance=1, steps=20, normalization=None, center=True) -> list:
     """
     Returns the computed value of the evaluation function applied to the model along a planar
     subspace of the parameter space defined by a start point and two randomly sampled directions.
@@ -216,15 +224,12 @@ def random_plane(model_start, evaluation_f, distance=1, steps=20, normalization=
     network weights. For more details, see `https://arxiv.org/abs/1712.09913v3`. It is
     recommended to normalize the directions, preferably with the 'filter' option.
 
-    The evaluation function supplied has to be of the form
-
-        evaluation_function(model)
-
+    The Evaluator supplied has to be a subclass of the evaluations.evaluator.Evaluator class,
     and must specify a procedure whereby the model passed to it is evaluated on the
-    task of interest, returning the resulting loss.
+    task of interest, returning the resulting quantity (such as loss, loss gradient, etc).
 
     :param model_start: the model defining the origin point of the plane in parameter space
-    :param evaluation_f: function of form evaluation_f(model), used to evaluate model loss
+    :param evaluator: function of form evaluation_f(model), used to evaluate model loss
     :param distance: maximum distance in parameter space from the start point
     :param steps: at how many steps from start to end the model is evaluated
     :param normalization: normalization of direction vectors, must be one of 'filter', 'layer', 'model'
@@ -266,8 +271,10 @@ def random_plane(model_start, evaluation_f, distance=1, steps=20, normalization=
 
         for j in range(steps):
             model_start_wrapper.set_parameters(start_point + (dir_two * j))
-            data_column.append(evaluation_f(model_start_wrapper.get_model()))
+            data_column.append(evaluator(model_start_wrapper.get_model()))
 
         data_matrix.append(data_column)
         # reset dir two, increment dir one
         start_point.add_(dir_one)
+
+    return data_matrix
