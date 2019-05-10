@@ -1,9 +1,9 @@
 
 
 import numpy as np
-import loss_landscapes.utils.parameter_vector as pv
-from loss_landscapes.utils.parameter_vector import ParameterVector
-from loss_landscapes.utils.model_interface import ModelInterface
+import model_interface.parameter_vector as pv
+from model_interface.parameter_vector import ParameterVector
+from model_interface.model_wrapper import ModelWrapper
 
 
 class TrajectoryTracker:
@@ -25,7 +25,7 @@ class TrajectoryTracker:
         :param model: model object with current state of interest
         :return: N/A
         """
-        self.trajectory.append(ModelInterface(model).build_parameter_vector())
+        self.trajectory.append(ModelWrapper(model).build_parameter_vector())
 
     def get_trajectory(self) -> np.ndarray:
         """
