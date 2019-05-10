@@ -6,7 +6,7 @@ class Evaluator(ABC):
         super().__init__()
 
     @abstractmethod
-    def __call__(self, *args, **kwargs):
+    def __call__(self, model):
         pass
 
 
