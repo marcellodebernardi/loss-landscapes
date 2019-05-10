@@ -18,6 +18,13 @@ class ModelWrapper:
         self.model = model
         self.torch_keys = sorted(self.model.state_dict().keys())
 
+        # remove keys referring to persistent buffers and other non-parameter contents
+        for idx in range(len(self.torch_keys)):
+            key = self.torch_keys[idx]
+            if not isinstance(self.model.state_dict()[key], torch.nn.parameter.Parameter):
+                self.torch_keys.pop(idx)
+                idx -= 1
+
     def get_model(self):
         """
         Returns a reference to the model wrapped by this ModelInterface.
@@ -27,13 +34,13 @@ class ModelWrapper:
 
     def build_parameter_vector(self) -> ParameterVector:
         """
-        Returns the parameters of the model as a list of numpy arrays.
+        Returns the parameters of the model as a list of torch tensors.
         :return: list of numpy arrays
         """
         parameters = []
         # use keys from stored key list to ensure list is consistently ordered
         for key in self.torch_keys:
-            parameters.append(copy.deepcopy(self.model.state_dict()[key].numpy()))
+            parameters.append(copy.deepcopy(self.model.state_dict()[key]))
         return ParameterVector(parameters)
 
     def set_parameters(self, new_parameters: ParameterVector):
