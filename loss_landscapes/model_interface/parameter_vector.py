@@ -28,11 +28,15 @@ def _are_equisized_vectors(vector_a, vector_b) -> bool:
     elif not len(vector_a) == len(vector_b):
         raise ValueError('Mismatched vector lengths: ' + str(len(vector_a)) + ' != ' + str(len(vector_b)))
     elif not all(isinstance(p, torch.nn.parameter.Parameter) for p in vector_a):
-        raise ValueError('Not all elements in vector_a are of type torch.nn.parameter.Parameter.')
+        raise ValueError('Not all elements in vector_a are of type torch.nn.parameter.Parameter.\n'
+                         + 'Types found: ' + str([type(element) for element in vector_a]))
     elif not all(isinstance(p, torch.nn.parameter.Parameter) for p in vector_b):
-        raise ValueError('Not all elements in vector_b are of type torch.nn.parameter.Parameter.')
+        raise ValueError('Not all elements in vector_b are of type torch.nn.parameter.Parameter.\n'
+                         + 'Types found: ' + str([type(element) for element in vector_b]))
     elif not all(pair[0].size() == pair[1].size() for pair in zip(vector_a.get_parameters(), vector_b.get_parameters())):
-        raise ValueError('Parameters stored in vector_a and vector_b don\'t have matching shapes.')
+        raise ValueError('Parameters stored in vector_a and vector_b don\'t have matching shapes.\n'
+                         + 'vector_a shapes: ' + str([element.size() for element in vector_a]) + '\n'
+                         + 'vector_b shapes: ' + str([element.size() for element in vector_b]))
     else:
         return True
 
