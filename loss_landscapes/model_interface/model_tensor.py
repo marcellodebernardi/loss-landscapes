@@ -1,8 +1,6 @@
 import copy
 from abc import ABC, abstractmethod
 from loss_landscapes.model_interface.model_vector import ParameterVector
-from loss_landscapes.model_interface.torch.torch_tensor import TorchNamedParameterTensor
-from loss_landscapes.model_interface.torch.torch_tensor import rand_u_like as torch_rand_u_like
 
 
 class ParameterTensor(ABC):
