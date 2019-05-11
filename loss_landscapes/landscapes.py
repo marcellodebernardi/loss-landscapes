@@ -3,8 +3,7 @@ Functions for approximating landscapes in one and two dimensions.
 """
 
 import copy
-from loss_landscapes.model_interface.model_wrapper import wrap_model
-from loss_landscapes.model_interface.model_tensor import rand_u_like
+from loss_landscapes.model_interface.model_agnostic_factories import wrap_model, rand_u_like
 from loss_landscapes.evaluators.evaluator import Evaluator
 
 

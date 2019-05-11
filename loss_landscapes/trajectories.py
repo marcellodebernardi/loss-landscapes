@@ -6,8 +6,7 @@ a low-dimensional approximation of the trajectory.
 
 import numpy as np
 from loss_landscapes.model_interface.model_tensor import ParameterTensor
-from loss_landscapes.model_interface.model_wrapper import wrap_model
-from loss_landscapes.model_interface.model_tensor import rand_u_like
+from loss_landscapes.model_interface.model_agnostic_factories import wrap_model, rand_u_like
 
 
 class TrajectoryTracker:
