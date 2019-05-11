@@ -3,8 +3,8 @@ Functions for approximating landscapes in one and two dimensions.
 """
 
 import copy
-import loss_landscapes.model_interface.parameter_vector as pv
-from loss_landscapes.model_interface.model_wrapper import ModelWrapper
+from loss_landscapes.model_interface.model_wrapper import wrap_model
+from loss_landscapes.model_interface.model_tensor import rand_u_like
 from loss_landscapes.evaluators.evaluator import Evaluator
 
 
@@ -55,11 +55,11 @@ def linear_interpolation(model_start, model_end, evaluator: Evaluator, steps=100
     :return: 1-d array of loss values along the line connecting start and end models
     """
     # create wrappers from deep copies to avoid aliasing
-    start_model_wrapper = ModelWrapper(copy.deepcopy(model_start))
-    end_model_wrapper = ModelWrapper(copy.deepcopy(model_end))
+    start_model_wrapper = wrap_model(copy.deepcopy(model_start))
+    end_model_wrapper = wrap_model(copy.deepcopy(model_end))
 
-    start_point = start_model_wrapper.build_parameter_vector()
-    end_point = end_model_wrapper.build_parameter_vector()
+    start_point = start_model_wrapper.get_parameters()
+    end_point = end_model_wrapper.get_parameters()
     direction = (end_point - start_point) / steps
 
     data_values = []
@@ -107,12 +107,12 @@ def random_line(model_start, evaluator: Evaluator, distance=1, steps=100, normal
     :return: 1-d array of loss values along the randomly sampled direction
     """
     # create wrappers from deep copies to avoid aliasing
-    model_start_wrapper = ModelWrapper(copy.deepcopy(model_start))
+    model_start_wrapper = wrap_model(copy.deepcopy(model_start))
 
     # obtain start point in parameter space and random direction
     # random direction is randomly sampled, then normalized, and finally scaled by distance/steps
-    start_point = model_start_wrapper.build_parameter_vector()
-    direction = pv.rand_u_like(start_point)
+    start_point = model_start_wrapper.get_parameters()
+    direction = rand_u_like(start_point)
 
     if normalization == 'model':
         direction.model_normalize_()
@@ -170,14 +170,14 @@ def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: E
     :param steps: at how many steps from start to end the model is evaluated
     :return: 1-d array of loss values along the line connecting start and end models
     """
-    model_start_wrapper = ModelWrapper(copy.deepcopy(model_start))
-    model_end_one_wrapper = ModelWrapper(copy.deepcopy(model_end_one))
-    model_end_two_wrapper = ModelWrapper(copy.deepcopy(model_end_two))
+    model_start_wrapper = wrap_model(copy.deepcopy(model_start))
+    model_end_one_wrapper = wrap_model(copy.deepcopy(model_end_one))
+    model_end_two_wrapper = wrap_model(copy.deepcopy(model_end_two))
 
     # compute direction vectors
-    start_point = model_start_wrapper.build_parameter_vector()
-    end_point_one = model_end_one_wrapper.build_parameter_vector()
-    end_point_two = model_end_two_wrapper.build_parameter_vector()
+    start_point = model_start_wrapper.get_parameters()
+    end_point_one = model_end_one_wrapper.get_parameters()
+    end_point_two = model_end_two_wrapper.get_parameters()
     dir_one = (end_point_one - start_point) / steps
     dir_two = (end_point_two - start_point) / steps
 
@@ -235,11 +235,11 @@ def random_plane(model_start, evaluator: Evaluator, distance=1, steps=20, normal
     :param center: whether the start point is used as the central point or the start point
     :return: 1-d array of loss values along the line connecting start and end models
     """
-    model_start_wrapper = ModelWrapper(copy.deepcopy(model_start))
+    model_start_wrapper = wrap_model(copy.deepcopy(model_start))
 
-    start_point = model_start_wrapper.build_parameter_vector()
-    dir_one = pv.rand_u_like(start_point)
-    dir_two = pv.rand_u_like(start_point)
+    start_point = model_start_wrapper.get_parameters()
+    dir_one = rand_u_like(start_point)
+    dir_two = rand_u_like(start_point)
 
     if normalization == 'model':
         dir_one.model_normalize_()
