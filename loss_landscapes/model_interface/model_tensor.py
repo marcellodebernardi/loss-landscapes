@@ -254,20 +254,6 @@ def floordiv(vector: ParameterTensor, scalar) -> ParameterTensor:
     return vector // scalar
 
 
-def rand_u_like(example_tensor: ParameterTensor) -> ParameterTensor:
-    """
-    Constructively return a ParameterTensor with the same structure as the provided
-    example tensor, where each element of the tensor is randomly sampled from a
-    uniform [0, 1] distribution.
-    :param example_tensor: shape of this tensor is copied
-    :return: randomly sampled tensor with same shape as example tensor
-    """
-    if isinstance(example_tensor, TorchNamedParameterTensor):
-        return torch_rand_u_like(example_tensor)
-    else:
-        raise TypeError('Input of type ' + str(type(example_tensor)) + ' is not recognized.')
-
-
 def filter_normalize(tensor, order=2) -> ParameterTensor:
     new_tensor = copy.deepcopy(tensor)
     new_tensor.filter_normalize_(order)

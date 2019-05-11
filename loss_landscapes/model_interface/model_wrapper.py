@@ -1,6 +1,5 @@
 import abc
 from loss_landscapes.model_interface.model_tensor import ParameterTensor
-from loss_landscapes.model_interface.torch.torch_wrappers import TorchModelWrapper
 
 
 class ModelWrapper(abc.ABC):
@@ -28,17 +27,4 @@ class ModelWrapper(abc.ABC):
         :return: none
         """
         pass
-
-
-def wrap_model(model) -> ModelWrapper:
-    """
-    Returns an appropriate wrapper for the given model. For example, if the
-    model is a PyTorch model, returns a TorchModelWrapper for the model.
-    :param model: model to wrap
-    :return: appropriate wrapper for model
-    """
-    if 'torch' in str(type(model)):
-        return TorchModelWrapper(model)
-    else:
-        raise TypeError('Model type not supported.')
 
