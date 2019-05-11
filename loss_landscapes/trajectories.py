@@ -5,9 +5,9 @@ a low-dimensional approximation of the trajectory.
 
 
 import numpy as np
-import loss_landscapes.model_interface.parameter_vector as pv
-from loss_landscapes.model_interface.parameter_vector import ParameterVector
-from loss_landscapes.model_interface.model_wrapper import ModelWrapper
+from loss_landscapes.model_interface.model_tensor import ParameterTensor
+from loss_landscapes.model_interface.model_wrapper import wrap_model
+from loss_landscapes.model_interface.model_tensor import rand_u_like
 
 
 class TrajectoryTracker:
@@ -15,7 +15,7 @@ class TrajectoryTracker:
         # trajectory is a list of ParameterVector objects
         self.trajectory = []
 
-    def __getitem__(self, timestep) -> ParameterVector:
+    def __getitem__(self, timestep) -> ParameterTensor:
         """
         Returns the model parameters from the given training timestep as a ParameterVector.
         :param timestep: training step of parameters to retrieve
@@ -29,7 +29,7 @@ class TrajectoryTracker:
         :param model: model object with current state of interest
         :return: N/A
         """
-        self.trajectory.append(ModelWrapper(model).build_parameter_vector())
+        self.trajectory.append(wrap_model(model).get_parameters())
 
     def get_trajectory(self) -> np.ndarray:
         """
@@ -43,8 +43,8 @@ class TrajectoryTracker:
 
         # todo is sampling each parameter independently equivalent to sampling direction uniformly?
         if directions == 'random':
-            dir_x = pv.rand_u_like(self.trajectory[0])
-            dir_y = pv.rand_u_like(self.trajectory[0])
+            dir_x = rand_u_like(self.trajectory[0])
+            dir_y = rand_u_like(self.trajectory[0])
         elif directions == 'pca':
             raise NotImplementedError('PCA not yet implemented.')
         else:

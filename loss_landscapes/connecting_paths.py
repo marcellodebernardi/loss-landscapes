@@ -8,7 +8,7 @@ et al.'s Automated Nudged Elastic Band algorithm.
 import abc
 import copy
 import numpy as np
-from loss_landscapes.model_interface.model_wrapper import ModelWrapper
+from loss_landscapes.model_interface.model_wrapper import wrap_model
 
 
 class _ParametricCurve(abc.ABC):
@@ -48,15 +48,15 @@ class _BezierCurve(_ParametricCurve):
         if order != 2:
             raise NotImplementedError('Currently only order 2 bezier curves are supported.')
 
-        self.model_start_wrapper = ModelWrapper(copy.deepcopy(model_start))
-        self.model_end_wrapper = ModelWrapper(copy.deepcopy(model_end))
+        self.model_start_wrapper = wrap_model(copy.deepcopy(model_start))
+        self.model_end_wrapper = wrap_model(copy.deepcopy(model_end))
         self.order = order
         self.control_points = []
 
         # add intermediate control points
         if order > 1:
-            start_parameters = self.model_start_wrapper.build_parameter_vector()
-            end_parameters = self.model_end_wrapper.build_parameter_vector()
+            start_parameters = self.model_start_wrapper.get_parameters()
+            end_parameters = self.model_end_wrapper.get_parameters()
             direction = (end_parameters - start_parameters) / order
 
             for i in range(1, order):
@@ -86,11 +86,11 @@ def garipov_curve_search(model_a, model_b, curve_type='polygon_chain') -> np.nda
 
     This is an alternative to the auto_neb algorithm.
     """
-    model_a_wrapper = ModelWrapper(model_a)
-    model_b_wrapper = ModelWrapper(model_b)
+    model_a_wrapper = wrap_model(model_a)
+    model_b_wrapper = wrap_model(model_b)
 
-    point_a = model_a_wrapper.build_parameter_vector()
-    point_b = model_b_wrapper.build_parameter_vector()
+    point_a = model_a_wrapper.get_parameters()
+    point_b = model_b_wrapper.get_parameters()
 
     # todo
     if curve_type == 'polygon_chain':

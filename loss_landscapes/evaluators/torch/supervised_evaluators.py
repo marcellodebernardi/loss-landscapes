@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 import torch.autograd
 from loss_landscapes.evaluators.evaluator import Evaluator
-from loss_landscapes.model_interface.model_wrapper import ModelWrapper
+from loss_landscapes.model_interface.torch.torch_wrappers import NamedParameterWrapper
 
 
 class SupervisedTorchEvaluator(Evaluator, ABC):
@@ -136,11 +136,11 @@ class BetaSmoothnessEvaluator(SupervisedTorchEvaluator):
     def __call__(self, model):
         if self.previous_parameters is None:
             self.previous_gradient = self.gradient_evaluator(model)
-            self.previous_parameters = ModelWrapper(model).build_parameter_vector().numpy()
+            self.previous_parameters = NamedParameterWrapper(model).get_parameters().numpy()
             return 0.0
         else:
             current_grad = self.gradient_evaluator(model)
-            current_p = ModelWrapper(model).build_parameter_vector().numpy()
+            current_p = NamedParameterWrapper(model).get_parameters().numpy()
             previous_grad = self.previous_gradient
             previous_p = self.previous_parameters
 

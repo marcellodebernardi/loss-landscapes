@@ -1,54 +1,44 @@
-"""
-Defines functions for getting and setting the parameters of a model.
-"""
-
-import copy
-import torch
-import torch.nn
-from loss_landscapes.model_interface.parameter_vector import ParameterVector
+import abc
+from loss_landscapes.model_interface.model_tensor import ParameterTensor
+from loss_landscapes.model_interface.torch.torch_wrappers import TorchModelWrapper
 
 
-class ModelWrapper:
-    """ Wraps a model and defines the operations for getting its weights or updating them. """
-    def __init__(self, model):
-        super().__init__()
-        if not isinstance(model, torch.nn.Module):
-            raise ValueError('Model is not a subclass of torch.nn.Module.')
-
-        self.model = model
-        self.names = []
-
-        for name, _ in self.model.named_parameters():
-            self.names.append(name)
-
-        self.names.sort()
-
+class ModelWrapper(abc.ABC):
+    @abc.abstractmethod
     def get_model(self):
         """
-        Returns a reference to the model wrapped by this ModelInterface.
+        Return the model encapsulated in this wrapper.
         :return: wrapped model
         """
-        return self.model
+        pass
 
-    def build_parameter_vector(self) -> ParameterVector:
+    @abc.abstractmethod
+    def get_parameters(self) -> ParameterTensor:
         """
-        Returns the parameters of the model as a list of torch tensors.
-        :return: list of numpy arrays
+        Return a deep copy of the parameters made accessible by this wrapper.
+        :return: deep copy of accessible model parameters
         """
-        parameters = []
-        # use keys from stored key list to ensure list is consistently ordered
-        state_dict = self.model.state_dict()
-        for name in self.names:
-            parameters.append(copy.deepcopy(state_dict[name]))
-        return ParameterVector(parameters)
+        pass
 
-    def set_parameters(self, new_parameters: ParameterVector):
+    @abc.abstractmethod
+    def set_parameters(self, new_parameters: ParameterTensor):
         """
-        Sets the model's parameters using the given list of parameters.
-        :param new_parameters: list of numpy arrays
+        Sets the parameters of the wrapped model to the given ParameterVector.
+        :param new_parameters: ParameterVector of new parameters
         :return: none
         """
-        new_state_dict = copy.deepcopy(self.model.state_dict())
-        for idx, p in enumerate(new_parameters, 0):
-            new_state_dict[self.names[idx]] = copy.deepcopy(p)
-        self.model.load_state_dict(new_state_dict)
+        pass
+
+
+def wrap_model(model) -> ModelWrapper:
+    """
+    Returns an appropriate wrapper for the given model. For example, if the
+    model is a PyTorch model, returns a TorchModelWrapper for the model.
+    :param model: model to wrap
+    :return: appropriate wrapper for model
+    """
+    if 'torch' in str(type(model)):
+        return TorchModelWrapper(model)
+    else:
+        raise TypeError('Model type not supported.')
+
