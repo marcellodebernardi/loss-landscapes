@@ -19,14 +19,22 @@ EMPTY_PARAMETER_LIST = 'The parameter list is empty.'
 MISMATCHED_PARAMETER_LENGTH = 'The two parameters lists have mismatched lengths.'
 
 
-def _are_same_size_vectors(vector_a, vector_b) -> bool:
+def _are_equisized_vectors(vector_a, vector_b) -> bool:
     """ Returns true if the given vectors are fully compatible for addition and subtraction. """
-    return isinstance(vector_a, ParameterVector) \
-           and isinstance(vector_b, ParameterVector) \
-           and len(vector_a) == len(vector_b) \
-           and all(isinstance(p, torch.nn.parameter.Parameter) for p in vector_a) \
-           and all(isinstance(p, torch.nn.parameter.Parameter) for p in vector_b) \
-           and all(pair[0].size() == pair[1].size() for pair in zip(vector_a.get_parameters(), vector_b.get_parameters()))
+    if not isinstance(vector_a, ParameterVector):
+        raise TypeError('vector_a is of type ' + str(type(vector_a)) + ', should be ParameterVector.')
+    elif not isinstance(vector_b, ParameterVector):
+        raise TypeError('vector_b is of type ' + str(type(vector_b)) + ', should be ParameterVector.')
+    elif not len(vector_a) == len(vector_b):
+        raise ValueError('Mismatched vector lengths: ' + str(len(vector_a)) + ' != ' + str(len(vector_b)))
+    elif not all(isinstance(p, torch.nn.parameter.Parameter) for p in vector_a):
+        raise ValueError('Not all elements in vector_a are of type torch.nn.parameter.Parameter.')
+    elif not all(isinstance(p, torch.nn.parameter.Parameter) for p in vector_b):
+        raise ValueError('Not all elements in vector_b are of type torch.nn.parameter.Parameter.')
+    elif not all(pair[0].size() == pair[1].size() for pair in zip(vector_a.get_parameters(), vector_b.get_parameters())):
+        raise ValueError('Parameters stored in vector_a and vector_b don\'t have matching shapes.')
+    else:
+        return True
 
 
 def _is_scalar(scalar) -> bool:
@@ -54,7 +62,7 @@ class ParameterVector:
 
     def __add__(self, other):
         """ Addition of this ParameterVector with another one using the + operator. """
-        if not _are_same_size_vectors(self, other):
+        if not _are_equisized_vectors(self, other):
             raise ValueError('Second input is either not a ParameterVector or does not have the same length as first.')
 
         result = []
@@ -67,7 +75,7 @@ class ParameterVector:
 
     def add_(self, vector):
         """ In-place addition of another ParameterVector to this one. """
-        if not _are_same_size_vectors(self, vector):
+        if not _are_equisized_vectors(self, vector):
             raise ValueError('Input is either not a ParameterVector or does not have the same length as first.')
 
         for idx in range(len(self)):
@@ -75,7 +83,7 @@ class ParameterVector:
 
     def __sub__(self, other):
         """ Subtraction of another ParameterVector from this one using the - operator. """
-        if not _are_same_size_vectors(self, other):
+        if not _are_equisized_vectors(self, other):
             raise ValueError('Second input is either not a ParameterVector or does not have the same length as first.')
 
         result = []
@@ -88,7 +96,7 @@ class ParameterVector:
 
     def sub_(self, vector):
         """ In-place subtraction of another ParameterVector from this one. """
-        if not _are_same_size_vectors(self, vector):
+        if not _are_equisized_vectors(self, vector):
             raise ValueError('Input is either not a ParameterVector or does not have the same length as first.')
 
         for idx in range(len(self)):
