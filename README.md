@@ -17,7 +17,7 @@ can define the loss landscape as the set of all `n+1`-dimensional points `(param
 above, provides a visual representation of what a loss function over a two-dimensional parameter space might look 
 like:
 
-![Loss Landscape](/img/loss-landscape.png | width=100)
+<img src="/img/loss-landscape.png" width="80%" />
 
 Of course, real machine learning models have a number of parameters much greater than 2, so the parameter space of 
 the model is virtually never two-dimensional. Because we can't print visualizations in more than two dimensions, 
