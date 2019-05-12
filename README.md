@@ -17,7 +17,7 @@ can define the loss landscape as the set of all `n+1`-dimensional points `(param
 above, provides a visual representation of what a loss function over a two-dimensional parameter space might look 
 like:
 
-![Loss Landscape](/img/loss-landscape.png)
+![Loss Landscape](/img/loss-landscape.png | width=100)
 
 Of course, real machine learning models have a number of parameters much greater than 2, so the parameter space of 
 the model is virtually never two-dimensional. Because we can't print visualizations in more than two dimensions, 
@@ -42,7 +42,7 @@ This would return a 2-dimensional array of loss values, which the user can plot 
 Below is a simple contour plot made in `matplotlib` that demonstrates what a planar loss landscape could look like.
 Check the `examples` directory for `jupyter` notebooks with more in-depth examples of what is possible.
 
-![Loss Contour](/img/loss-contour.png)
+![Loss Contour](/img/loss-contour.png | width=100)
 
 
 ## 3. Evaluators and Custom Evaluators
