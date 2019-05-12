@@ -15,7 +15,7 @@ from tqdm import tqdm
 # code from this library - import the lines module
 import loss_landscapes
 import loss_landscapes.evaluators
-from loss_landscapes.evaluators.torch.supervised_evaluators import LossEvaluator
+import loss_landscapes.evaluators.torch
 
 
 # input dimension and output dimension for an MNIST classifier
@@ -93,10 +93,25 @@ def main():
     # train model
     model_initial, model_final = train(model, optimizer, criterion, train_loader, 100, 1)
 
+    # collect linear interpolation data
     x, y = iter(torch.utils.data.DataLoader(mnist_train, batch_size=10000, shuffle=False)).__next__()
-
     evaluator = LossEvaluator(criterion, x, y)
     loss_data = loss_landscapes.linear_interpolation(model_initial, model_final, evaluator)
+
+    # plot linear interpolation
+    plt.plot(loss_data)
+    plt.title('Linear Interpolation of Loss')
+    plt.xlabel('Parameter Step')
+    plt.ylabel('Loss')
+    plt.show()
+
+    # collect planar data
+    loss_data = loss_landscapes.random_plane(model_initial, evaluator, steps=20)
+
+    # plot planar data
+    plt.contourf(loss_data)
+    plt.title('Contour Plot of Loss Landscape')
+    plt.show()
 
 
 if __name__ == '__main__':
