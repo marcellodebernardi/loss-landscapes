@@ -1,7 +1,7 @@
 
 
 import torch
-from loss_landscapes.model_interface.torch.torch_tensor import TorchNamedParameterTensor
+from loss_landscapes.model_interface.torch.torch_tensor import TorchParameterTensor
 
 
 # todo these type checks exist for debugging purposes - remove once not needed
@@ -17,9 +17,9 @@ def is_scalar(scalar) -> bool:
 
 def _are_equisized_torch_tensors(tensor_a, tensor_b) -> bool:
     """ Returns true if the given vectors are fully compatible for addition and subtraction. """
-    if not isinstance(tensor_a, TorchNamedParameterTensor):
+    if not isinstance(tensor_a, TorchParameterTensor):
         raise TypeError('vector_a is of type ' + str(type(tensor_a)) + ', should be ParameterVector.')
-    elif not isinstance(tensor_b, TorchNamedParameterTensor):
+    elif not isinstance(tensor_b, TorchParameterTensor):
         raise TypeError('vector_b is of type ' + str(type(tensor_b)) + ', should be ParameterVector.')
     elif not len(tensor_a) == len(tensor_b):
         raise ValueError('Mismatched vector lengths: ' + str(len(tensor_a)) + ' != ' + str(len(tensor_b)))
