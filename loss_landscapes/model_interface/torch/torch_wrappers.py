@@ -3,14 +3,15 @@ Defines functions for getting and setting the parameters of a model.
 """
 
 import copy
-import abc
+from abc import ABC
+
 import torch
 import torch.nn
 from loss_landscapes.model_interface.model_wrapper import ModelWrapper
 from loss_landscapes.model_interface.torch.torch_tensor import TorchNamedParameterTensor
 
 
-class TorchModelWrapper(abc.ABC, ModelWrapper):
+class TorchModelWrapper(ModelWrapper, ABC):
     """ A ModelWrapper which hides a PyTorch model, defined as any subclass of torch.nn.Module. """
     def __init__(self, model: torch.nn.Module):
         if not isinstance(model, torch.nn.Module):
