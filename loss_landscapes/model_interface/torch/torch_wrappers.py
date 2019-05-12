@@ -7,11 +7,11 @@ from abc import ABC
 
 import torch
 import torch.nn
-from loss_landscapes.model_interface.model_wrapper import ModelWrapper
-from loss_landscapes.model_interface.torch.torch_tensor import TorchNamedParameterTensor
+import loss_landscapes.model_interface.model_wrapper as model_wrapper
+import loss_landscapes.model_interface.torch.torch_tensor as torch_tensor
 
 
-class TorchModelWrapper(ModelWrapper, ABC):
+class TorchModelWrapper(model_wrapper.ModelWrapper, ABC):
     """ A ModelWrapper which hides a PyTorch model, defined as any subclass of torch.nn.Module. """
     def __init__(self, model: torch.nn.Module):
         if not isinstance(model, torch.nn.Module):
@@ -19,7 +19,7 @@ class TorchModelWrapper(ModelWrapper, ABC):
         self.model = model
 
 
-class NamedParameterWrapper(TorchModelWrapper):
+class TorchNamedParameterWrapper(TorchModelWrapper):
     """
     A TorchModelWrapper which enables manipulating only the model's named parameters.
     Persistent buffers and unnamed parameters are invisible to wrappers of this class.
@@ -37,7 +37,7 @@ class NamedParameterWrapper(TorchModelWrapper):
         """
         return self.model
 
-    def get_parameters(self) -> TorchNamedParameterTensor:
+    def get_parameters(self) -> 'torch_tensor.TorchParameterTensor':
         """
         Return a deep copy of the parameters made accessible by this wrapper.
         :return: deep copy of accessible model parameters
@@ -47,9 +47,9 @@ class NamedParameterWrapper(TorchModelWrapper):
         state_dict = self.model.state_dict()
         for name in self.parameter_names:
             parameters.append(state_dict[name].clone().detach())
-        return TorchNamedParameterTensor(parameters)
+        return torch_tensor.TorchParameterTensor(parameters)
 
-    def set_parameters(self, new_parameters: TorchNamedParameterTensor):
+    def set_parameters(self, new_parameters: torch_tensor.TorchParameterTensor):
         """
         Sets the parameters of the wrapped model to the given ParameterVector.
         :param new_parameters: ParameterVector of new parameters

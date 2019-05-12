@@ -1,5 +1,5 @@
 import abc
-from loss_landscapes.model_interface.model_tensor import ParameterTensor
+import loss_landscapes.model_interface.model_tensor as model_tensor
 
 
 class ModelWrapper(abc.ABC):
@@ -12,7 +12,7 @@ class ModelWrapper(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_parameters(self) -> ParameterTensor:
+    def get_parameters(self) -> model_tensor.ParameterTensor:
         """
         Return a deep copy of the parameters made accessible by this wrapper.
         :return: deep copy of accessible model parameters
@@ -20,7 +20,7 @@ class ModelWrapper(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def set_parameters(self, new_parameters: ParameterTensor):
+    def set_parameters(self, new_parameters: model_tensor.ParameterTensor):
         """
         Sets the parameters of the wrapped model to the given ParameterVector.
         :param new_parameters: ParameterVector of new parameters

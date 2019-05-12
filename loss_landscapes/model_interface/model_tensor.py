@@ -1,6 +1,6 @@
 import copy
 from abc import ABC, abstractmethod
-from loss_landscapes.model_interface.model_vector import ParameterVector
+import loss_landscapes.model_interface.model_vector as model_vector
 
 
 class ParameterTensor(ABC):
@@ -215,7 +215,7 @@ class ParameterTensor(ABC):
         pass
 
     @abstractmethod
-    def as_vector(self) -> ParameterVector:
+    def as_vector(self) -> model_vector.ParameterVector:
         """
         Returns a flattened view of the tensor which shares the underlying elements. Note the
         aliasing of the tensor/vector elements.
