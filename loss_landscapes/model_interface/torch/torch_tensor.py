@@ -121,6 +121,6 @@ def rand_u_like(example_vector) -> TorchParameterTensor:
     new_vector = []
 
     for param in example_vector:
-        new_vector.append(np.random.uniform(size=np.size(param)))
+        new_vector.append(np.random.uniform(size=param.size()))
 
     return TorchParameterTensor(new_vector)
