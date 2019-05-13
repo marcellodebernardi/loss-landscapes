@@ -1,8 +1,8 @@
-import os
-import sys
-import copy
-import itertools
-import matplotlib
+"""
+Testing version of the code in examples/loss_contours
+"""
+
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -10,20 +10,16 @@ import torch.nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torchvision.datasets as datasets
-import torchvision.transforms as transforms
 from tqdm import tqdm
-# code from this library - import the lines module
 import loss_landscapes
-import loss_landscapes.evaluators
-import loss_landscapes.evaluators.torch
+import loss_landscapes.evaluators.torch as evaluators
+from loss_landscapes.utils import deepcopy_model
 
 
-# input dimension and output dimension for an MNIST classifier
+# constants
 IN_DIM = 28 * 28
 OUT_DIM = 10
-# training settings
-LR = 10 ** -3
-EPOCHS = 1
+LR = 10 ** -2
 BATCH_SIZE = 64
 
 
@@ -32,23 +28,17 @@ class MLP(torch.nn.Module):
         super().__init__()
         self.linear_1 = torch.nn.Linear(IN_DIM, 512)
         self.linear_2 = torch.nn.Linear(512, 256)
-        self.linear_3 = torch.nn.Linear(256, 128)
-        self.linear_4 = torch.nn.Linear(128, 64)
-        self.linear_5 = torch.nn.Linear(64, OUT_DIM)
-        self.softmax = torch.nn.Softmax(dim=0)
+        self.linear_3 = torch.nn.Linear(256, OUT_DIM)
 
     def forward(self, x):
-        x = F.relu(self.linear_1(x))
-        x = F.relu(self.linear_2(x))
-        x = F.relu(self.linear_3(x))
-        x = F.relu(self.linear_4(x))
-        x = self.softmax(self.linear_5(x))
-        return x
+        h = F.relu(self.linear_1(x))
+        h = F.relu(self.linear_2(h))
+        y = self.linear_3(h)
+        return y
 
 
 class Flatten(object):
     """ Transforms a PIL image to a flat numpy array. """
-
     def __init__(self):
         pass
 
@@ -56,46 +46,50 @@ class Flatten(object):
         return np.array(sample, dtype=np.float32).flatten()
 
 
-def train(model, optimizer, criterion, train_loader, batches=100, epochs=1):
-    # save initial state
-    model_initial = copy.deepcopy(model)
-
+def train(model, optimizer, criterion, train_loader, epochs):
+    model.train()
     # train model
-    for epoch in range(epochs):
+    for _ in tqdm(range(epochs), 'Training'):
         for count, batch in enumerate(train_loader, 0):
-            if count == batches:
-                break
-
-            x, y = batch
             optimizer.zero_grad()
+            x, y = batch
 
             pred = model(x)
             loss = criterion(pred, y)
             loss.backward()
             optimizer.step()
 
-    # save final state
-    model_final = copy.deepcopy(model)
-
-    return model_initial, model_final
+    model.eval()
 
 
 def main():
     # download MNIST
     mnist_train = datasets.MNIST(root='../data/', train=True, download=True, transform=Flatten())
     train_loader = torch.utils.data.DataLoader(mnist_train, batch_size=BATCH_SIZE, shuffle=False)
+    mnist_test = datasets.MNIST(root='../data/', train=True, download=False, transform=Flatten())
+    test_loader = torch.utils.data.DataLoader(mnist_test, batch_size=10000, shuffle=False)
 
-    # define model
+    # define model and deepcopy initial model
     model = MLP()
-    optimizer = optim.Adam(model.parameters(), lr=LR)
-    criterion = torch.nn.CrossEntropyLoss()
+    model_initial = deepcopy_model(model, 'torch')
+
+    x, y = iter(test_loader).__next__()
+    evaluator = evaluators.ClassificationAccuracyEvaluator(x, y)
+    print('Classification accuracy before: ' + str(loss_landscapes.point(model, evaluator)))
 
     # train model
-    model_initial, model_final = train(model, optimizer, criterion, train_loader, 100, 1)
+    optimizer = optim.Adam(model.parameters(), lr=LR)
+    criterion = torch.nn.CrossEntropyLoss()
+    train(model, optimizer, criterion, train_loader, 25)
+
+    print('Classification accuracy after: ' + str(loss_landscapes.point(model, evaluator)))
+
+    # deepcopy final model
+    model_final = deepcopy_model(model, 'torch')
 
     # collect linear interpolation data
     x, y = iter(torch.utils.data.DataLoader(mnist_train, batch_size=10000, shuffle=False)).__next__()
-    evaluator = LossEvaluator(criterion, x, y)
+    evaluator = evaluators.LossEvaluator(criterion, x, y)
     loss_data = loss_landscapes.linear_interpolation(model_initial, model_final, evaluator)
 
     # plot linear interpolation
