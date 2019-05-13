@@ -9,13 +9,14 @@ computing the loss, the gradient of the loss (w.r.t. model parameters) and Hessi
 
 from abc import ABC, abstractmethod
 import numpy as np
+import torch
 import torch.autograd
 from loss_landscapes.evaluators.evaluator import Evaluator
 from loss_landscapes.model_interface.torch.torch_wrappers import TorchNamedParameterWrapper
 
 
 class SupervisedTorchEvaluator(Evaluator, ABC):
-    """ Abstract class for PyTorch supervised learning evaluation functions. """
+    """ Abstract class for PyTorch supervised learning loss evaluation functions. """
     def __init__(self, supervised_loss_fn, inputs, target):
         super().__init__()
         self.loss_fn = supervised_loss_fn
@@ -157,6 +158,7 @@ class PlateauEvaluator(SupervisedTorchEvaluator):
     """
     def __init__(self, supervised_loss_fn, inputs, target):
         super().__init__(supervised_loss_fn, inputs, target)
+        raise NotImplementedError()
 
     def __call__(self, model):
         # todo how to best characterize a plateau?
