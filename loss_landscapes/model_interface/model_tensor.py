@@ -27,6 +27,16 @@ class ParameterTensor(ABC):
         pass
 
     @abstractmethod
+    def __eq__(self, other) -> bool:
+        """
+        Compares this parameter tensor for equality with the argument tensor, using the == operator.
+
+        :param other: the object to compare to
+        :return: true if equal
+        """
+        pass
+
+    @abstractmethod
     def __add__(self, vector) -> 'ParameterTensor':
         """
         Constructively returns the result of addition between this tensor and another.
