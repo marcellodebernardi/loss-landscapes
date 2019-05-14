@@ -12,7 +12,6 @@ the '__' suffix to the name of in-place operations.
 import math
 import torch
 import torch.nn
-import numpy as np
 import loss_landscapes.model_interface.model_tensor as model_tensor
 import loss_landscapes.model_interface.torch.torch_vector as torch_vector
 
@@ -29,6 +28,12 @@ class TorchParameterTensor(model_tensor.ParameterTensor):
 
     def __getitem__(self, index) -> torch.nn.Parameter:
         return self.parameters[index]
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, TorchParameterTensor) or len(self) != len(other):
+            return False
+        else:
+            return all(torch.equal(p_self, p_other) for p_self, p_other in zip(self.parameters, other.parameters))
 
     def __add__(self, other) -> 'TorchParameterTensor':
         return TorchParameterTensor([self[idx] + other[idx] for idx in range(len(self))])
