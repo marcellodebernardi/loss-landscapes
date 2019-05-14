@@ -63,7 +63,7 @@ def train(model, optimizer, criterion, train_loader, epochs):
 
 
 def main():
-    # download MNIST
+    # download MNIST and setup data loaders
     mnist_train = datasets.MNIST(root='../data/', train=True, download=True, transform=Flatten())
     train_loader = torch.utils.data.DataLoader(mnist_train, batch_size=BATCH_SIZE, shuffle=False)
     mnist_test = datasets.MNIST(root='../data/', train=True, download=False, transform=Flatten())
@@ -72,25 +72,23 @@ def main():
     # define model and deepcopy initial model
     model = MLP()
     model_initial = deepcopy_model(model, 'torch')
-
-    x, y = iter(test_loader).__next__()
-    evaluator = evaluators.ClassificationAccuracyEvaluator(x, y)
-    print('Classification accuracy before: ' + str(loss_landscapes.point(model, evaluator)))
-
-    # train model
     optimizer = optim.Adam(model.parameters(), lr=LR)
     criterion = torch.nn.CrossEntropyLoss()
-    train(model, optimizer, criterion, train_loader, 25)
 
-    print('Classification accuracy after: ' + str(loss_landscapes.point(model, evaluator)))
+    # evaluate classification accuracy before and after training
+    x, y = iter(test_loader).__next__()
+    acc_evaluator = evaluators.ClassificationAccuracyEvaluator(x, y)
+    print('Classification accuracy before training: ' + str(loss_landscapes.point(model, acc_evaluator)))
+    train(model, optimizer, criterion, train_loader, 2)
+    print('Classification accuracy after training: ' + str(loss_landscapes.point(model, acc_evaluator)))
 
     # deepcopy final model
     model_final = deepcopy_model(model, 'torch')
 
     # collect linear interpolation data
     x, y = iter(torch.utils.data.DataLoader(mnist_train, batch_size=10000, shuffle=False)).__next__()
-    evaluator = evaluators.LossEvaluator(criterion, x, y)
-    loss_data = loss_landscapes.linear_interpolation(model_initial, model_final, evaluator)
+    acc_evaluator = evaluators.LossEvaluator(criterion, x, y)
+    loss_data = loss_landscapes.linear_interpolation(model_initial, model_final, acc_evaluator)
 
     # plot linear interpolation
     plt.plot(loss_data)
@@ -100,7 +98,7 @@ def main():
     plt.show()
 
     # collect planar data
-    loss_data = loss_landscapes.random_plane(model_initial, evaluator, steps=20)
+    loss_data = loss_landscapes.random_plane(model_initial, acc_evaluator, steps=20)
 
     # plot planar data
     plt.contourf(loss_data)

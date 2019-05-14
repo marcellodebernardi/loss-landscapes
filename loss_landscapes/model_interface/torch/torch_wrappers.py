@@ -24,11 +24,26 @@ class TorchNamedParameterWrapper(TorchModelWrapper):
     A TorchModelWrapper which enables manipulating only the model's named parameters.
     Persistent buffers and unnamed parameters are invisible to wrappers of this class.
     """
-    def __init__(self, model: torch.nn.Module):
+    def __init__(self, model: torch.nn.Module, layer_names=None):
+        """
+        Construct a model wrapper which only exposes and operates on the underlying
+        model's named parameters (torch.nn.Module.named_parameters()). By default
+        the wrapper considers all of the model's named parameters, but can be limited
+        to specific layers
+
+        :param model: model to wrap
+        :param layer_names:
+        """
         super().__init__(model)
         # sorted parameter names are used to define a 'correct' ordering
         # of tensors for generated ParameterVector objects.
         self.parameter_names = sorted([name for name, _ in self.model.named_parameters()])
+
+        # if user indicates specific layers, then only keep those layers
+        if layer_names is not None:
+            for name in self.parameter_names:
+                if name not in layer_names:
+                    self.parameter_names.remove(name)
 
     def get_model(self) -> torch.nn.Module:
         """

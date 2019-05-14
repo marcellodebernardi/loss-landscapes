@@ -71,7 +71,19 @@ dependent on model parameters the user is interested in evaluating , and how to 
 for example, an evaluator that computes an estimate of the expected return of a reinforcement learning agent.
 
 
-## 3. Trajectory Tracking
+## 3. Model Wrappers
+In the general case, client code calls functions such as `loss_landscapes.linear_interpolation` and passes as
+argument a reference to a deep learning model. The library implementation wraps the model using a `ModelWrapper` -
+an abstraction layer that hides the model's implementation details, which are specific to the DL library being
+used in the client code. This process is not visible to the user and in most cases can safely be ignored.
+
+For more complex cases, such as when the user wants to evaluate the loss landscape as a function of a subset of
+the model parameters, the user can import a model wrapper from the `loss_landscapes.model_interface` package and
+explicitly wrap it before passing it to a function such as `linear_interpolation`. Some of the wrappers allow for
+highly granular control over which model parameters are ignored.
+
+
+## 4. Trajectory Tracking
 The library also enables trajectory tracking in a simple, model-agnostic fashion. A `TrajectoryTracker` object
 stores a model parameter history, which the user can update by passing the model to the tracker, which extracts
 the model's current state and appends it to the trajectory history.
@@ -81,7 +93,7 @@ directions, PCA directions (see Li et al., 2018), and so on. A good use case for
 the optimization trajectory on a landscape contour plot, which can easily be accomplished using `matplotlib`.
 
 
-## 4. Work in Progress: Connecting Paths and Saddle Points
+## 5. Work in Progress: Connecting Paths and Saddle Points
 A number of papers in recent years have shown that loss landscapes of neural networks are dominated by a
 proliferation of saddle points, that good solutions are better described as large low-loss plateaus than as
 "well-bottom" points, and that for sufficiently high-dimensional networks, a low-loss path in parameter space can
@@ -91,11 +103,11 @@ In the future, the `loss-landscapes` library will feature implementations of alg
 connecting paths in the loss landscape, as well as tools to facilitate the study of saddle points.
 
 
-## 5. Support for Other DL Libraries
+## 6. Support for Other DL Libraries
 Once the currently envisioned features are complete, the first priority will be adding support for TensorFlow.
 
 
-## 6. Installation and Use
+## 7. Installation and Use
 The package is available on PyPI. Install using `pip install loss-landscapes`. To use the library, import as follows:
 
 ````python
