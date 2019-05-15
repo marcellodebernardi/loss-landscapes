@@ -39,10 +39,13 @@ landscape = random_plane(model, evaluator, normalize='filter')
 ````
 
 This would return a 2-dimensional array of loss values, which the user can plot in any desirable way. 
-Below is a simple contour plot made in `matplotlib` that demonstrates what a planar loss landscape could look like.
+Below are a contour plot and a surface plot made in `matplotlib`, drawn over the same loss landscape data, that 
+demonstrate what a loss landscape along a planar parameter subspace could look like.
 Check the `examples` directory for `jupyter` notebooks with more in-depth examples of what is possible.
 
 <p align="center"><img src="/img/loss-contour.png" width="50%" align="middle"/></p>
+
+<p align="center"><img src="/img/loss-contour-3d.png" width="50%" align="middle"/></p>
 
 
 ## 3. Evaluators and Custom Evaluators
