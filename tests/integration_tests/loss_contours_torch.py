@@ -22,7 +22,7 @@ IN_DIM = 28 * 28
 OUT_DIM = 10
 LR = 10 ** -1
 BATCH_SIZE = 256
-EPOCHS = 10
+EPOCHS = 15
 STEPS = 40
 
 
@@ -56,6 +56,10 @@ def main():
     # download MNIST and setup data loaders
     mnist_train = datasets.MNIST(root='../data/', train=True, download=True, transform=Flatten())
     train_loader = torch.utils.data.DataLoader(mnist_train, batch_size=BATCH_SIZE, shuffle=False)
+    mnist_test = datasets.MNIST(root='../data', train=False, download=True, transform=Flatten())
+    test_loader = torch.utils.data.DataLoader(mnist_test, batch_size=10000, shuffle=False)
+    x_test, y_test = iter(test_loader).__next__()
+    test_evaluator = evaluators.ClassificationAccuracyEvaluator(x_test, y_test)
 
     # define model and deepcopy initial model
     model = MLP(IN_DIM, OUT_DIM)
@@ -63,7 +67,9 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=LR)
     criterion = torch.nn.CrossEntropyLoss()
 
+    print('Accuracy: ' + str(loss_landscapes.point(model_initial, test_evaluator)) + '\n')
     train(model, optimizer, criterion, train_loader, EPOCHS)
+    print('Accuracy: ' + str(loss_landscapes.point(model_initial, test_evaluator)) + '\n')
 
     # deepcopy final model and prepare for loss evaluation
     model_final = deepcopy_model(model, 'torch')
@@ -104,7 +110,7 @@ def main():
     loss_data = loss_landscapes.random_plane(model_final, evaluator, distance=1, steps=STEPS, normalization='layer')
     plt.contour(loss_data, levels=50)
     plt.title('Loss Contours around Trained Model')
-    plt.show(dpi=500)
+    plt.savefig(fname='contour.png', dpi=500)
 
     fig = plt.figure()
     ax = plt.axes(projection='3d')
@@ -112,7 +118,7 @@ def main():
     Y = np.array([[i for _ in range(STEPS)] for i in range(STEPS)])
     ax.plot_surface(X, Y, loss_data, rstride=1, cstride=1, cmap='viridis', edgecolor='none')
     ax.set_title('Loss Contours around Trained Model')
-    fig.show(dpi=500)
+    fig.savefig(fname='contour3d.png', dpi=500)
 
 
 if __name__ == '__main__':
