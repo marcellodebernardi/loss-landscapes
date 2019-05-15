@@ -198,7 +198,7 @@ def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: E
     return np.array(data_matrix)
 
 
-def random_plane(model, evaluator: Evaluator, distance=0.1, steps=20, normalization=None, center=True) -> np.ndarray:
+def random_plane(model, evaluator: Evaluator, distance=1, steps=20, normalization=None, center=True) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model along a planar
     subspace of the parameter space defined by a start point and two randomly sampled directions.
