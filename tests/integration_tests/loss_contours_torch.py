@@ -63,16 +63,17 @@ def main():
 
     # define model and deepcopy initial model
     model = MLP(IN_DIM, OUT_DIM)
-    model_initial = deepcopy_model(model, 'torch')
     optimizer = optim.Adam(model.parameters(), lr=LR)
     criterion = torch.nn.CrossEntropyLoss()
 
+    model_initial = deepcopy_model(model, 'torch')
     print('Accuracy: ' + str(loss_landscapes.point(model_initial, test_evaluator)) + '\n')
+
     train(model, optimizer, criterion, train_loader, EPOCHS)
-    print('Accuracy: ' + str(loss_landscapes.point(model_initial, test_evaluator)) + '\n')
 
     # deepcopy final model and prepare for loss evaluation
     model_final = deepcopy_model(model, 'torch')
+    print('Accuracy: ' + str(loss_landscapes.point(model_final, test_evaluator)) + '\n')
     x, y = iter(torch.utils.data.DataLoader(mnist_train, batch_size=BATCH_SIZE, shuffle=False)).__next__()
     evaluator = evaluators.LossEvaluator(criterion, x, y)
 
