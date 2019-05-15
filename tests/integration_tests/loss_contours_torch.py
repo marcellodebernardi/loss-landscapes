@@ -111,15 +111,15 @@ def main():
     loss_data = loss_landscapes.random_plane(model_final, evaluator, distance=1, steps=STEPS, normalization='layer')
     plt.contour(loss_data, levels=50)
     plt.title('Loss Contours around Trained Model')
-    plt.savefig(fname='contour.png', dpi=500)
+    plt.savefig(fname='contour.png', dpi=300)
 
     fig = plt.figure()
     ax = plt.axes(projection='3d')
     X = np.array([[j for j in range(STEPS)] for i in range(STEPS)])
     Y = np.array([[i for _ in range(STEPS)] for i in range(STEPS)])
     ax.plot_surface(X, Y, loss_data, rstride=1, cstride=1, cmap='viridis', edgecolor='none')
-    ax.set_title('Loss Contours around Trained Model')
-    fig.savefig(fname='contour3d.png', dpi=500)
+    ax.set_title('Loss Surface Plot centered on Trained Model')
+    fig.savefig(fname='contour3d.png', dpi=300)
 
 
 if __name__ == '__main__':
