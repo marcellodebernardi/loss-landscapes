@@ -6,6 +6,9 @@ Env/
 # data
 data/
 
+# debugging files
+tests/paste.txt
+
 # jupyter notebook checkpoints
 .ipynb_checkpoints/
 
@@ -14,3 +17,6 @@ loss_landscapes.egg-info/
 
 # dist
 dist/
+
+# tests
+tests/
