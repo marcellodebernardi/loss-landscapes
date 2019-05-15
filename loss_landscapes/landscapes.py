@@ -3,6 +3,7 @@ Functions for approximating landscapes in one and two dimensions.
 """
 
 import copy
+import numpy as np
 from loss_landscapes.model_interface.model_agnostic_factories import wrap_model, rand_u_like
 from loss_landscapes.evaluators.evaluator import Evaluator
 
@@ -23,7 +24,7 @@ def point(model, evaluator: Evaluator) -> tuple:
     return evaluator(model)
 
 
-def linear_interpolation(model_start, model_end, evaluator: Evaluator, steps=100) -> list:
+def linear_interpolation(model_start, model_end, evaluator: Evaluator, steps=100) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model 
     along a linear subspace of the parameter space defined by two end points.
@@ -67,10 +68,10 @@ def linear_interpolation(model_start, model_end, evaluator: Evaluator, steps=100
         start_model_wrapper.set_parameters(start_point + (direction * i))
         data_values.append(evaluator(start_model_wrapper.get_model()))
 
-    return data_values
+    return np.array(data_values)
 
 
-def random_line(model_start, evaluator: Evaluator, distance=1, steps=100, normalization=None) -> list:
+def random_line(model_start, evaluator: Evaluator, distance=0.1, steps=100, normalization=None) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model along a 
     linear subspace of the parameter space defined by a start point and a randomly sampled direction.
@@ -132,10 +133,10 @@ def random_line(model_start, evaluator: Evaluator, distance=1, steps=100, normal
         model_start_wrapper.set_parameters(start_point + (direction * i))
         data_values.append(evaluator(model_start_wrapper.get_model()))
 
-    return data_values
+    return np.array(data_values)
 
 
-def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: Evaluator, steps=20) -> list:
+def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: Evaluator, steps=20) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model along
     a planar subspace of the parameter space defined by a start point and two end points.
@@ -194,10 +195,10 @@ def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: E
         data_matrix.append(data_column)
         start_point.add_(dir_one)
 
-    return data_matrix
+    return np.array(data_matrix)
 
 
-def random_plane(model_start, evaluator: Evaluator, distance=1, steps=20, normalization=None, center=True) -> list:
+def random_plane(model, evaluator: Evaluator, distance=0.1, steps=20, normalization=None, center=True) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model along a planar
     subspace of the parameter space defined by a start point and two randomly sampled directions.
@@ -226,7 +227,7 @@ def random_plane(model_start, evaluator: Evaluator, distance=1, steps=20, normal
     and must specify a procedure whereby the model passed to it is evaluated on the
     task of interest, returning the resulting quantity (such as loss, loss gradient, etc).
 
-    :param model_start: the model defining the origin point of the plane in parameter space
+    :param model: the model defining the origin point of the plane in parameter space
     :param evaluator: function of form evaluation_f(model), used to evaluate model loss
     :param distance: maximum distance in parameter space from the start point
     :param steps: at how many steps from start to end the model is evaluated
@@ -234,7 +235,7 @@ def random_plane(model_start, evaluator: Evaluator, distance=1, steps=20, normal
     :param center: whether the start point is used as the central point or the start point
     :return: 1-d array of loss values along the line connecting start and end models
     """
-    model_start_wrapper = wrap_model(copy.deepcopy(model_start))
+    model_start_wrapper = wrap_model(copy.deepcopy(model))
 
     start_point = model_start_wrapper.get_parameters()
     dir_one = rand_u_like(start_point)
@@ -272,7 +273,6 @@ def random_plane(model_start, evaluator: Evaluator, distance=1, steps=20, normal
             data_column.append(evaluator(model_start_wrapper.get_model()))
 
         data_matrix.append(data_column)
-        # reset dir two, increment dir one
         start_point.add_(dir_one)
 
-    return data_matrix
+    return np.array(data_matrix)

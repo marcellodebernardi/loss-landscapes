@@ -4,6 +4,7 @@ Testing version of the code in examples/loss_contours
 
 
 import matplotlib.pyplot as plt
+from mpl_toolkits import mplot3d
 import numpy as np
 import torch
 import torch.nn
@@ -20,7 +21,7 @@ from loss_landscapes.utils import deepcopy_model
 IN_DIM = 28 * 28
 OUT_DIM = 10
 LR = 10 ** -2
-BATCH_SIZE = 64
+BATCH_SIZE = 8
 
 
 class MLP(torch.nn.Module):
@@ -28,12 +29,20 @@ class MLP(torch.nn.Module):
         super().__init__()
         self.linear_1 = torch.nn.Linear(IN_DIM, 512)
         self.linear_2 = torch.nn.Linear(512, 256)
-        self.linear_3 = torch.nn.Linear(256, OUT_DIM)
+        self.linear_3 = torch.nn.Linear(256, 128)
+        self.linear_4 = torch.nn.Linear(128, 64)
+        self.linear_5 = torch.nn.Linear(64, 32)
+        self.linear_6 = torch.nn.Linear(32, 16)
+        self.linear_7 = torch.nn.Linear(16, OUT_DIM)
 
     def forward(self, x):
         h = F.relu(self.linear_1(x))
         h = F.relu(self.linear_2(h))
-        y = self.linear_3(h)
+        h = F.relu(self.linear_3(h))
+        h = F.relu(self.linear_4(h))
+        h = F.relu(self.linear_5(h))
+        h = F.relu(self.linear_6(h))
+        y = self.linear_7(h)
         return y
 
 
@@ -51,6 +60,9 @@ def train(model, optimizer, criterion, train_loader, epochs):
     # train model
     for _ in tqdm(range(epochs), 'Training'):
         for count, batch in enumerate(train_loader, 0):
+            if count == 100:
+                break
+
             optimizer.zero_grad()
             x, y = batch
 
@@ -66,8 +78,6 @@ def main():
     # download MNIST and setup data loaders
     mnist_train = datasets.MNIST(root='../data/', train=True, download=True, transform=Flatten())
     train_loader = torch.utils.data.DataLoader(mnist_train, batch_size=BATCH_SIZE, shuffle=False)
-    mnist_test = datasets.MNIST(root='../data/', train=True, download=False, transform=Flatten())
-    test_loader = torch.utils.data.DataLoader(mnist_test, batch_size=10000, shuffle=False)
 
     # define model and deepcopy initial model
     model = MLP()
@@ -75,35 +85,57 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=LR)
     criterion = torch.nn.CrossEntropyLoss()
 
-    # evaluate classification accuracy before and after training
-    x, y = iter(test_loader).__next__()
-    acc_evaluator = evaluators.ClassificationAccuracyEvaluator(x, y)
-    print('Classification accuracy before training: ' + str(loss_landscapes.point(model, acc_evaluator)))
     train(model, optimizer, criterion, train_loader, 2)
-    print('Classification accuracy after training: ' + str(loss_landscapes.point(model, acc_evaluator)))
 
-    # deepcopy final model
+    # deepcopy final model and prepare for loss evaluation
     model_final = deepcopy_model(model, 'torch')
+    x, y = iter(torch.utils.data.DataLoader(mnist_train, batch_size=BATCH_SIZE, shuffle=False)).__next__()
+    evaluator = evaluators.LossEvaluator(criterion, x, y)
 
-    # collect linear interpolation data
-    x, y = iter(torch.utils.data.DataLoader(mnist_train, batch_size=10000, shuffle=False)).__next__()
-    acc_evaluator = evaluators.LossEvaluator(criterion, x, y)
-    loss_data = loss_landscapes.linear_interpolation(model_initial, model_final, acc_evaluator)
-
-    # plot linear interpolation
+    # linear interpolation
+    loss_data = loss_landscapes.linear_interpolation(model_initial, model_final, evaluator)
     plt.plot(loss_data)
     plt.title('Linear Interpolation of Loss')
     plt.xlabel('Parameter Step')
     plt.ylabel('Loss')
     plt.show()
 
-    # collect planar data
-    loss_data = loss_landscapes.random_plane(model_initial, acc_evaluator, steps=20)
-
-    # plot planar data
-    plt.contourf(loss_data)
-    plt.title('Contour Plot of Loss Landscape')
+    # random direction
+    loss_data = loss_landscapes.random_line(model_initial, evaluator, normalization='layer')
+    plt.plot(loss_data)
+    plt.title('Loss Landscape along Random Direction')
+    plt.xlabel('Parameter Step')
+    plt.ylabel('Loss')
     plt.show()
+
+    # random plane centered on initialization
+    steps = 30
+    loss_data = loss_landscapes.random_plane(model_initial, evaluator, steps=steps, normalization='model')
+    plt.contour(loss_data)
+    plt.title('Loss Contours around Initial Model')
+    plt.show()
+
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    X = np.array([[j for j in range(steps)] for i in range(steps)])
+    Y = np.array([[i for _ in range(steps)] for i in range(steps)])
+    ax.plot_surface(X, Y, loss_data, rstride=1, cstride=1, cmap='viridis', edgecolor='none')
+    ax.set_title('Loss Contours around Initial Model')
+    fig.show()
+
+    # random plane centered on trained model
+    loss_data = loss_landscapes.random_plane(model_final, evaluator, steps=30, normalization='model')
+    plt.contour(loss_data)
+    plt.title('Loss Contours around Trained Model')
+    plt.show()
+
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    X = np.array([[j for j in range(steps)] for i in range(steps)])
+    Y = np.array([[i for _ in range(steps)] for i in range(steps)])
+    ax.plot_surface(X, Y, loss_data, rstride=1, cstride=1, cmap='viridis', edgecolor='none')
+    ax.set_title('Loss Contours around Trained Model')
+    fig.show()
 
 
 if __name__ == '__main__':

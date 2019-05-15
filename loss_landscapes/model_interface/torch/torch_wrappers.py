@@ -61,7 +61,7 @@ class TorchNamedParameterWrapper(TorchModelWrapper):
         # use keys from stored key list to ensure list is consistently ordered
         state_dict = self.model.state_dict()
         for name in self.parameter_names:
-            parameters.append(state_dict[name].clone().detach())
+            parameters.append(state_dict[name].clone().detach().double())
         return torch_tensor.TorchParameterTensor(parameters)
 
     def set_parameters(self, new_parameters: torch_tensor.TorchParameterTensor):
