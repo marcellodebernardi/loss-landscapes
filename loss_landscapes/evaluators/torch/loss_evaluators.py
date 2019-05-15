@@ -82,6 +82,33 @@ class PrincipalCurvaturesEvaluator(SupervisedTorchEvaluator):
         return np.linalg.eigvals(self.hessian_evaluator(model))
 
 
+class CurvaturePositivityEvaluator(SupervisedTorchEvaluator):
+    """
+    Computes the extent of the positivity of a loss function's curvature at a
+    specific point in parameter space. The extent of positivity is measured as
+    the fraction of dimensions with positive curvature. Optionally, dimensions
+    can be weighted by the magnitude of their curvature.
+
+    Inspired by a related metric in the paper by Li et al,
+    http://papers.nips.cc/paper/7875-visualizing-the-loss-landscape-of-neural-nets.
+    """
+    def __init__(self, supervised_loss_fn, inputs, target, weighted=False):
+        super().__init__(None, None, None)
+        self.curvatures_evaluator = PrincipalCurvaturesEvaluator(supervised_loss_fn, inputs, target)
+        self.weighted = weighted
+
+    def __call__(self, model) -> np.ndarray:
+        curvatures = self.curvatures_evaluator(model)
+        # ratio of sum of all positive curvatures over sum of all negative curvatures
+        if self.weighted:
+            positive_total = curvatures[(curvatures >= 0)].sum()
+            negative_total = np.abs(curvatures[(curvatures < 0)].sum())
+            return positive_total / negative_total
+        # fraction of dimensions with positive curvature
+        else:
+            return np.array((curvatures >= 0).sum() / curvatures.size())
+
+
 class GradientPredictivenessEvaluator(SupervisedTorchEvaluator):
     """
     Computes the L2 norm of the distance between loss gradients at consecutive
