@@ -43,9 +43,9 @@ Below are a contour plot and a surface plot made in `matplotlib`, drawn over the
 demonstrate what a loss landscape along a planar parameter subspace could look like.
 Check the `examples` directory for `jupyter` notebooks with more in-depth examples of what is possible.
 
-<p align="center"><img src="/img/loss-contour.png" width="50%" align="middle"/></p>
+<p align="center"><img src="/img/loss-contour.png" width="75%" align="middle"/></p>
 
-<p align="center"><img src="/img/loss-contour-3d.png" width="50%" align="middle"/></p>
+<p align="center"><img src="/img/loss-contour-3d.png" width="75%" align="middle"/></p>
 
 
 ## 3. Evaluators and Custom Evaluators
