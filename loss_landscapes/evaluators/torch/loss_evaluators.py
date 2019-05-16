@@ -52,61 +52,72 @@ class GradientEvaluator(SupervisedTorchEvaluator):
         return gradient.detach().numpy()
 
 
-class HessianEvaluator(SupervisedTorchEvaluator):
-    """
-    Computes the Hessian of a specified loss function w.r.t. the model
-    parameters over specified input-output pairs.
-    """
-    def __init__(self, supervised_loss_fn, inputs, target):
-        super().__init__(supervised_loss_fn, inputs, target)
+# todo - these are complicated by the fact that hessian matrix is of size O(n^2) in the number of NN params
+# ideally there would be a way to compute the eigenvalues incrementally, without computing the whole hessian
+# matrix first.
 
-    def __call__(self, model) -> np.ndarray:
-        loss = self.loss_fn(model(self.inputs), self.target)
-        # for computing higher-order gradients, see https://github.com/pytorch/pytorch/releases/tag/v0.2.0
-        gradient = torch.autograd.grad(loss, model.parameters(), create_graph=True)
-        hessian = torch.autograd.grad(gradient, model.parameters())
-        return hessian.detach().numpy()
-
-
-class PrincipalCurvaturesEvaluator(SupervisedTorchEvaluator):
-    """
-    Computes the principal curvatures of a specified loss function over
-    specified input-output pairs. The principal curvatures are the
-    eigenvalues of the Hessian matrix.
-    """
-    def __init__(self, supervised_loss_fn, inputs, target):
-        super().__init__(None, None, None)
-        self.hessian_evaluator = HessianEvaluator(supervised_loss_fn, inputs, target)
-
-    def __call__(self, model) -> np.ndarray:
-        return np.linalg.eigvals(self.hessian_evaluator(model))
-
-
-class CurvaturePositivityEvaluator(SupervisedTorchEvaluator):
-    """
-    Computes the extent of the positivity of a loss function's curvature at a
-    specific point in parameter space. The extent of positivity is measured as
-    the fraction of dimensions with positive curvature. Optionally, dimensions
-    can be weighted by the magnitude of their curvature.
-
-    Inspired by a related metric in the paper by Li et al,
-    http://papers.nips.cc/paper/7875-visualizing-the-loss-landscape-of-neural-nets.
-    """
-    def __init__(self, supervised_loss_fn, inputs, target, weighted=False):
-        super().__init__(None, None, None)
-        self.curvatures_evaluator = PrincipalCurvaturesEvaluator(supervised_loss_fn, inputs, target)
-        self.weighted = weighted
-
-    def __call__(self, model) -> np.ndarray:
-        curvatures = self.curvatures_evaluator(model)
-        # ratio of sum of all positive curvatures over sum of all negative curvatures
-        if self.weighted:
-            positive_total = curvatures[(curvatures >= 0)].sum()
-            negative_total = np.abs(curvatures[(curvatures < 0)].sum())
-            return positive_total / negative_total
-        # fraction of dimensions with positive curvature
-        else:
-            return np.array((curvatures >= 0).sum() / curvatures.size())
+# class HessianEvaluator(SupervisedTorchEvaluator):
+#     """
+#     Computes the Hessian of a specified loss function w.r.t. the model
+#     parameters over specified input-output pairs.
+#     """
+#     def __init__(self, supervised_loss_fn, inputs, target):
+#         super().__init__(supervised_loss_fn, inputs, target)
+#
+#     def __call__(self, model) -> np.ndarray:
+#         loss = self.loss_fn(model(self.inputs), self.target)
+#         gradient = torch.autograd.grad(loss, [p for _, p in model.named_parameters()], create_graph=True)
+#         gradient = torch.cat(tuple([p.view(-1) for p in gradient]))
+#         numel = sum([param.numel() for param in gradient])
+#
+#         # for computing higher-order gradients, see https://github.com/pytorch/pytorch/releases/tag/v0.2.0
+#         hessian = torch.zeros(size=(numel, numel))
+#
+#         for derivative, idx in enumerate(gradient, 0):
+#             hessian[idx] = torch.autograd.grad(torch.tensor(derivative), [p.view(-1) for _, p in model.named_parameters()])
+#
+#         return hessian.detach().numpy()
+#
+#
+# class PrincipalCurvaturesEvaluator(SupervisedTorchEvaluator):
+#     """
+#     Computes the principal curvatures of a specified loss function over
+#     specified input-output pairs. The principal curvatures are the
+#     eigenvalues of the Hessian matrix.
+#     """
+#     def __init__(self, supervised_loss_fn, inputs, target):
+#         super().__init__(None, None, None)
+#         self.hessian_evaluator = HessianEvaluator(supervised_loss_fn, inputs, target)
+#
+#     def __call__(self, model) -> np.ndarray:
+#         return np.linalg.eigvals(self.hessian_evaluator(model))
+#
+#
+# class CurvaturePositivityEvaluator(SupervisedTorchEvaluator):
+#     """
+#     Computes the extent of the positivity of a loss function's curvature at a
+#     specific point in parameter space. The extent of positivity is measured as
+#     the fraction of dimensions with positive curvature. Optionally, dimensions
+#     can be weighted by the magnitude of their curvature.
+#
+#     Inspired by a related metric in the paper by Li et al,
+#     http://papers.nips.cc/paper/7875-visualizing-the-loss-landscape-of-neural-nets.
+#     """
+#     def __init__(self, supervised_loss_fn, inputs, target, weighted=False):
+#         super().__init__(None, None, None)
+#         self.curvatures_evaluator = PrincipalCurvaturesEvaluator(supervised_loss_fn, inputs, target)
+#         self.weighted = weighted
+#
+#     def __call__(self, model) -> np.ndarray:
+#         curvatures = self.curvatures_evaluator(model)
+#         # ratio of sum of all positive curvatures over sum of all negative curvatures
+#         if self.weighted:
+#             positive_total = curvatures[(curvatures >= 0)].sum()
+#             negative_total = np.abs(curvatures[(curvatures < 0)].sum())
+#             return positive_total / negative_total
+#         # fraction of dimensions with positive curvature
+#         else:
+#             return np.array((curvatures >= 0).sum() / curvatures.size())
 
 
 class GradientPredictivenessEvaluator(SupervisedTorchEvaluator):
