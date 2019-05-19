@@ -12,7 +12,9 @@ import numpy as np
 import torch
 import torch.autograd
 from loss_landscapes.evaluators.evaluator import Evaluator
+from loss_landscapes.model_interface.model_agnostic_factories import wrap_model
 from loss_landscapes.model_interface.torch.torch_wrappers import TorchNamedParameterWrapper
+from loss_landscapes.model_interface.torch.torch_tensor import rand_u_like
 
 
 class SupervisedTorchEvaluator(Evaluator, ABC):
@@ -35,6 +37,33 @@ class LossEvaluator(SupervisedTorchEvaluator):
 
     def __call__(self, model) -> np.ndarray:
         return self.loss_fn(model(self.inputs), self.target).clone().detach().numpy()
+
+
+class LossPerturbationEvaluator(SupervisedTorchEvaluator):
+    """
+    Computes perturbations in the loss value along a sample of random directions.
+    These perturbations can be used to reason probabilistically about the curvature
+    of a point on the loss landscape, as demonstrated in the paper by Schuurmans
+    et al (https://arxiv.org/abs/1811.11214).
+    """
+    def __init__(self, supervised_loss_fn, inputs, target, n_directions, alpha):
+        super().__init__(supervised_loss_fn, inputs, target)
+        self.n_directions = n_directions
+        self.alpha = alpha
+
+    def __call__(self, model) -> np.ndarray:
+        model_wrapper = wrap_model(model)
+        # start point and directions
+        start_point = model_wrapper.get_parameters()
+        directions = [rand_u_like(start_point) for _ in range(self.n_directions)]
+        results = []
+        # compute start loss and perturbed losses
+        start_loss = self.loss_fn(model(self.inputs), self.target).clone().detach().numpy()
+        for idx in range(self.n_directions):
+            model_wrapper.set_parameters(start_point + directions[idx])
+            perturbed_loss = self.loss_fn(model(self.inputs), self.target).clone().detach().numpy()
+            results.append(perturbed_loss - start_loss)
+        return np.array(results)
 
 
 class GradientEvaluator(SupervisedTorchEvaluator):
