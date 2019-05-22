@@ -24,7 +24,7 @@ def point(model, evaluator: Evaluator) -> tuple:
     return evaluator(model)
 
 
-def linear_interpolation(model_start, model_end, evaluator: Evaluator, steps=100) -> np.ndarray:
+def linear_interpolation(model_start, model_end, evaluator: Evaluator, steps=100, deepcopy_model=False) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model 
     along a linear subspace of the parameter space defined by two end points.
@@ -52,26 +52,28 @@ def linear_interpolation(model_start, model_end, evaluator: Evaluator, steps=100
     :param model_end: the model defining the end point of the line in parameter space
     :param evaluator: list of function of form evaluation_f(model), used to evaluate model loss
     :param steps: at how many steps from start to end the model is evaluated
+    :param deepcopy_model: indicates whether the method will deepcopy the model(s) to avoid aliasing
     :return: 1-d array of loss values along the line connecting start and end models
     """
-    # create wrappers from deep copies to avoid aliasing
-    start_model_wrapper = wrap_model(copy.deepcopy(model_start))
-    end_model_wrapper = wrap_model(copy.deepcopy(model_end))
+    # create wrappers from deep copies to avoid aliasing if desired
+    model_start_wrapper = wrap_model(copy.deepcopy(model_start) if deepcopy_model else model_start)
+    end_model_wrapper = wrap_model(copy.deepcopy(model_end) if deepcopy_model else model_end)
 
-    start_point = start_model_wrapper.get_parameters()
+    start_point = model_start_wrapper.get_parameters()
     end_point = end_model_wrapper.get_parameters()
     direction = (end_point - start_point) / steps
 
     data_values = []
     for i in range(steps):
         # add a step along the line to the model parameters, then evaluate
-        start_model_wrapper.set_parameters(start_point + (direction * i))
-        data_values.append(evaluator(start_model_wrapper.get_model()))
+        start_point.add_(direction)
+        data_values.append(evaluator(model_start_wrapper.get_model()))
 
     return np.array(data_values)
 
 
-def random_line(model_start, evaluator: Evaluator, distance=0.1, steps=100, normalization=None) -> np.ndarray:
+def random_line(model_start, evaluator: Evaluator, distance=0.1, steps=100, normalization=None,
+                deepcopy_model=False) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model along a 
     linear subspace of the parameter space defined by a start point and a randomly sampled direction.
@@ -104,10 +106,11 @@ def random_line(model_start, evaluator: Evaluator, distance=0.1, steps=100, norm
     :param distance: maximum distance in parameter space from the start point
     :param steps: at how many steps from start to end the model is evaluated
     :param normalization: normalization of direction vector, must be one of 'filter', 'layer', 'model'
+    :param deepcopy_model: indicates whether the method will deepcopy the model(s) to avoid aliasing
     :return: 1-d array of loss values along the randomly sampled direction
     """
-    # create wrappers from deep copies to avoid aliasing
-    model_start_wrapper = wrap_model(copy.deepcopy(model_start))
+    # create wrappers from deep copies to avoid aliasing if desired
+    model_start_wrapper = wrap_model(copy.deepcopy(model_start) if deepcopy_model else model_start)
 
     # obtain start point in parameter space and random direction
     # random direction is randomly sampled, then normalized, and finally scaled by distance/steps
@@ -130,13 +133,14 @@ def random_line(model_start, evaluator: Evaluator, distance=0.1, steps=100, norm
     data_values = []
     for i in range(steps):
         # add a step along the line to the model parameters, then evaluate
-        model_start_wrapper.set_parameters(start_point + (direction * i))
+        start_point.add_(direction)
         data_values.append(evaluator(model_start_wrapper.get_model()))
 
     return np.array(data_values)
 
 
-def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: Evaluator, steps=20) -> np.ndarray:
+def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: Evaluator, steps=20,
+                         deepcopy_model=False) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model along
     a planar subspace of the parameter space defined by a start point and two end points.
@@ -168,29 +172,35 @@ def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: E
     :param model_end_two: the model representing the end point of the second direction defining the plane
     :param evaluator: function of form evaluation_f(model), used to evaluate model loss
     :param steps: at how many steps from start to end the model is evaluated
+    :param deepcopy_model: indicates whether the method will deepcopy the model(s) to avoid aliasing
     :return: 1-d array of loss values along the line connecting start and end models
     """
-    model_start_wrapper = wrap_model(copy.deepcopy(model_start))
-    model_end_one_wrapper = wrap_model(copy.deepcopy(model_end_one))
-    model_end_two_wrapper = wrap_model(copy.deepcopy(model_end_two))
+    model_start_wrapper = wrap_model(copy.deepcopy(model_start) if deepcopy_model else model_start)
+    model_end_one_wrapper = wrap_model(copy.deepcopy(model_end_one) if deepcopy_model else model_end_one)
+    model_end_two_wrapper = wrap_model(copy.deepcopy(model_end_two) if deepcopy_model else model_end_two)
 
     # compute direction vectors
     start_point = model_start_wrapper.get_parameters()
-    end_point_one = model_end_one_wrapper.get_parameters()
-    end_point_two = model_end_two_wrapper.get_parameters()
-    dir_one = (end_point_one - start_point) / steps
-    dir_two = (end_point_two - start_point) / steps
+    dir_one = (model_end_one_wrapper.get_parameters() - start_point) / steps
+    dir_two = (model_end_two_wrapper.get_parameters() - start_point) / steps
 
     data_matrix = []
-    # for each increment in direction one, evaluate all steps in direction two
+    # evaluate loss in grid of (steps * steps) points, where each column signifies one step
+    # along dir_one and each row signifies one step along dir_two. The implementation is again
+    # a little convoluted to avoid constructive operations. Fundamentally we generate the matrix
+    # [[start_point + (dir_one * i) + (dir_two * j) for j in range(steps)] for i in range(steps].
     for i in range(steps):
         data_column = []
 
         for j in range(steps):
-            # set parameters and evaluate
-            model_start_wrapper.set_parameters(start_point + (dir_two * j))
-            data_column.append(evaluator(model_start_wrapper.get_model()))
-            # increment parameters
+            # for every other column, reverse the order in which the column is generated
+            # so you can easily use in-place operations to move along dir_two
+            if i % 2 == 0:
+                start_point.add_(dir_two)
+                data_column.append(evaluator(model_start_wrapper.get_model()))
+            else:
+                start_point.sub_(dir_two)
+                data_column.insert(0, evaluator(model_start_wrapper.get_model()))
 
         data_matrix.append(data_column)
         start_point.add_(dir_one)
@@ -198,7 +208,8 @@ def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: E
     return np.array(data_matrix)
 
 
-def random_plane(model, evaluator: Evaluator, distance=1, steps=20, normalization=None, center=True) -> np.ndarray:
+def random_plane(model, evaluator: Evaluator, distance=1, steps=20, normalization=None,
+                 deepcopy_model=False) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model along a planar
     subspace of the parameter space defined by a start point and two randomly sampled directions.
@@ -232,10 +243,10 @@ def random_plane(model, evaluator: Evaluator, distance=1, steps=20, normalizatio
     :param distance: maximum distance in parameter space from the start point
     :param steps: at how many steps from start to end the model is evaluated
     :param normalization: normalization of direction vectors, must be one of 'filter', 'layer', 'model'
-    :param center: whether the start point is used as the central point or the start point
+    :param deepcopy_model: indicates whether the method will deepcopy the model(s) to avoid aliasing
     :return: 1-d array of loss values along the line connecting start and end models
     """
-    model_start_wrapper = wrap_model(copy.deepcopy(model))
+    model_start_wrapper = wrap_model(copy.deepcopy(model) if deepcopy_model else model)
 
     start_point = model_start_wrapper.get_parameters()
     dir_one = rand_u_like(start_point)
@@ -255,22 +266,33 @@ def random_plane(model, evaluator: Evaluator, distance=1, steps=20, normalizatio
     else:
         raise AttributeError('Unsupported normalization argument. Supported values are model, layer, and filter')
 
-    dir_one.mul_(distance / steps)
-    dir_two.mul_(distance / steps)
-
-    if center:
-        # if center, move start point in opposite direction of dir_one and dir_two by half the total distance
-        start_point.sub_(dir_one * (steps / 2))
-        start_point.sub_(dir_two * (steps / 2))
+    # Move start point so that original start params will be in the center of the plot.
+    # It would be cleaner to write start_point.sub_(dir_one * (steps / 2)), but this
+    # uses a constructive operation which can cause OutOfMemoryError on large models.
+    dir_one.mul_(distance / 2)
+    dir_two.mul_(distance / 2)
+    start_point.sub_(dir_one)
+    start_point.sub_(dir_two)
+    dir_one.truediv_(steps / 2)
+    dir_two.truediv_(steps / 2)
 
     data_matrix = []
-    # for each increment in direction one, evaluate all steps in direction two
+    # evaluate loss in grid of (steps * steps) points, where each column signifies one step
+    # along dir_one and each row signifies one step along dir_two. The implementation is again
+    # a little convoluted to avoid constructive operations. Fundamentally we generate the matrix
+    # [[start_point + (dir_one * i) + (dir_two * j) for j in range(steps)] for i in range(steps].
     for i in range(steps):
         data_column = []
 
         for j in range(steps):
-            model_start_wrapper.set_parameters(start_point + (dir_two * j))
-            data_column.append(evaluator(model_start_wrapper.get_model()))
+            # for every other column, reverse the order in which the column is generated
+            # so you can easily use in-place operations to move along dir_two
+            if i % 2 == 0:
+                start_point.add_(dir_two)
+                data_column.append(evaluator(model_start_wrapper.get_model()))
+            else:
+                start_point.sub_(dir_two)
+                data_column.insert(0, evaluator(model_start_wrapper.get_model()))
 
         data_matrix.append(data_column)
         start_point.add_(dir_one)
