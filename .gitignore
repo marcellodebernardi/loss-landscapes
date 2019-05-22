@@ -17,6 +17,7 @@ loss_landscapes.egg-info/
 
 # dist
 dist/
+build/
 
 # tests
 tests/
