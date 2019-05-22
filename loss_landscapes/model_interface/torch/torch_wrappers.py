@@ -52,16 +52,21 @@ class TorchNamedParameterWrapper(TorchModelWrapper):
         """
         return self.model
 
-    def get_parameters(self) -> 'torch_tensor.TorchParameterTensor':
+    def get_parameters(self, deepcopy=False) -> 'torch_tensor.TorchParameterTensor':
         """
-        Return a deep copy of the parameters made accessible by this wrapper.
-        :return: deep copy of accessible model parameters
+        Return a TorchParameterTensor wrapping the parameters of the underlying model.
+        The parameters can either be returned as a view of the model parameters or as a
+        copy.
+        :param deepcopy: whether to view or deepcopy the model parameters
+        :return: view or deepcopy of accessible model parameters
         """
         parameters = []
         # use keys from stored key list to ensure list is consistently ordered
         state_dict = self.model.state_dict()
+        # either copy or view each parameter from the state dictionary
         for name in self.parameter_names:
-            parameters.append(state_dict[name].clone().detach().double())
+            param = state_dict[name]
+            parameters.append(param if not deepcopy else param.clone().detach())
         return torch_tensor.TorchParameterTensor(parameters)
 
     def set_parameters(self, new_parameters: torch_tensor.TorchParameterTensor):

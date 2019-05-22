@@ -6,16 +6,18 @@ class ModelWrapper(abc.ABC):
     @abc.abstractmethod
     def get_model(self):
         """
-        Return the model encapsulated in this wrapper.
+        Return a reference to the model encapsulated in this wrapper.
         :return: wrapped model
         """
         pass
 
     @abc.abstractmethod
-    def get_parameters(self) -> model_tensor.ParameterTensor:
+    def get_parameters(self, deepcopy=False) -> model_tensor.ParameterTensor:
         """
-        Return a deep copy of the parameters made accessible by this wrapper.
-        :return: deep copy of accessible model parameters
+        Return a ParameterTensor wrapping the parameters of the underlying model. The
+        parameters can either be returned as a view of the model parameters or as a copy.
+        :param deepcopy: whether to view or deepcopy the model parameters
+        :return: view or deepcopy of accessible model parameters
         """
         pass
 
