@@ -88,27 +88,29 @@ class TorchParameterTensor(model_tensor.ParameterTensor):
             parameter /= norm
 
     def layer_normalize_(self, order=2):
-        layer_norms = self._layer_norms(order)
         # in-place normalize each parameter
         for layer_idx, parameter in enumerate(self.parameters, 0):
-            parameter /= layer_norms[layer_idx]
+            parameter /= self._layer_norm(layer_idx, order)
 
     def filter_normalize_(self, order=2):
-        raise NotImplementedError()
+        for l in range(len(self.parameters)):
+            for f in range(len(self.parameters[l])):
+                self.parameters[l][f] /= self._filter_norm((l, f), order)
 
     def _model_norm(self, order=2) -> float:
-        n = 0.0
-        for parameter in self.parameters:
-            n += torch.pow(parameter, order).sum().item()
-        return math.pow(n, 1.0 / order)
+        # L-n norm of model where we treat the model as a flat vector
+        return math.pow(sum([
+            torch.pow(layer, order).sum().item()
+            for layer in self.parameters
+        ]), 1.0 / order)
 
-    def _layer_norms(self, order=2) -> list:
-        # use pytorch to compute each layer tensor's norm
-        return [torch.norm(parameter, p=('fro' if order == 2 else order)).item() for parameter in self.parameters]
+    def _layer_norm(self, index, order=2) -> float:
+        # L-n norms of layer where we treat each layer as a flat vector
+        return math.pow(torch.pow(self.parameters[index], order).sum().item(), 1.0 / order)
 
-    def _filter_norms(self, order=2) -> list:
-        # todo once figured out how to isolate filters
-        raise NotImplementedError()
+    def _filter_norm(self, index, order=2) -> float:
+        # L-n norm of each filter where we treat each layer as a flat vector
+        return math.pow(torch.pow(self.parameters[index[0]][index[1]], order).sum().item(), 1.0 / order)
 
     def as_numpy_list(self) -> list:
         # list of numpy arrays

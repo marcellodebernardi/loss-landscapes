@@ -199,19 +199,21 @@ class ParameterTensor(ABC):
         pass
 
     @abstractmethod
-    def _layer_norms(self, order=2) -> list:
+    def _layer_norm(self, index: int, order=2) -> float:
         """
         Returns a list of layer-wise L-norms of the tensor.
         :param order: norm order, e.g. 2 for L2 norm
+        :param index: layer index
         :return: list of L-norms of layers
         """
         pass
 
     @abstractmethod
-    def _filter_norms(self, order=2) -> list:
+    def _filter_norm(self, index: tuple, order=2) -> float:
         """
         Returns a 2D list of filter-wise L-norms of the tensor.
         :param order: norm order, e.g. 2 for L2 norm
+        :param index: tuple with layer index and filter index
         :return: list of L-norms of filters
         """
         pass
