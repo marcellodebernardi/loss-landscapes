@@ -72,7 +72,7 @@ def linear_interpolation(model_start, model_end, evaluator: Evaluator, steps=100
     return np.array(data_values)
 
 
-def random_line(model_start, evaluator: Evaluator, distance=0.1, steps=100, normalization=None,
+def random_line(model_start, evaluator: Evaluator, distance=0.1, steps=100, normalization='filter',
                 deepcopy_model=False) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model along a 
@@ -208,7 +208,7 @@ def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: E
     return np.array(data_matrix)
 
 
-def random_plane(model, evaluator: Evaluator, distance=1, steps=20, normalization=None,
+def random_plane(model, evaluator: Evaluator, distance=1, steps=20, normalization='filter',
                  deepcopy_model=False) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model along a planar
