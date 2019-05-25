@@ -5,6 +5,7 @@ a low-dimensional approximation of the trajectory.
 
 
 from abc import ABC, abstractmethod
+from datetime import datetime
 import numpy as np
 from loss_landscapes.model_interface.model_agnostic_factories import wrap_model
 
@@ -15,9 +16,6 @@ class TrajectoryTracker(ABC):
     DL/RL model. Trajectory trackers provide facilities for storing model parameters
     as well as for retrieving and operating on stored parameters.
     """
-    def __init__(self):
-        # trajectory is a list of ParameterVector objects
-        self.trajectory = []
 
     @abstractmethod
     def __getitem__(self, timestep) -> np.ndarray:
@@ -33,6 +31,14 @@ class TrajectoryTracker(ABC):
         """
         Returns the position of the model from the given training timestep as a numpy array.
         :param timestep: training step of parameters to retrieve
+        :return: numpy array
+        """
+        pass
+
+    @abstractmethod
+    def get_trajectory(self) -> list:
+        """
+        Returns a reference to the currently stored trajectory.
         :return: numpy array
         """
         pass
@@ -46,36 +52,40 @@ class TrajectoryTracker(ABC):
         """
         pass
 
-    def get_trajectory(self) -> list:
-        """
-        Returns a reference to the currently stored trajectory.
-        :return: numpy array
-        """
-        return self.trajectory
-
 
 class FullTrajectoryTracker(TrajectoryTracker):
     """
     A FullTrajectoryTracker is a tracker which stores a history of points in the tracked
     model's original parameter space, and can be used to perform a variety of computations
-    on the trajectory.
-
-    WARNING: be aware that full trajectory tracking requires N * M memory, where N is the
-    number of iterations tracked and M is the size of the model. The amount of memory used
-    by the trajectory tracker can easily become very large.
+    on the trajectory. The tracker spills data into storage rather than keeping everything
+    in main memory.
     """
-    def __init__(self, model):
+    def __init__(self, model, directory='./', experiment_name=None):
         super().__init__()
-        self.trajectory.append(wrap_model(model).get_parameters(deepcopy=True).as_numpy())
+        self.dir = directory + (experiment_name if experiment_name is not None else str(datetime.now()) + '/')
+        self.next_idx = 0
+        self.save_position(model)
 
     def __getitem__(self, timestep) -> np.ndarray:
-        return self.trajectory[timestep]
+        if not (1 <= timestep < self.next_idx):
+            raise IndexError('Given timestep does not exist.')
+        return np.load(self.dir + str(timestep) + '.npy')
 
     def get_item(self, timestep) -> np.ndarray:
         return self.__getitem__(timestep)
 
     def save_position(self, model):
-        self.trajectory.append(wrap_model(model).get_parameters(deepcopy=True).as_numpy())
+        np.save(self.dir + str(self.next_idx) + '.npy', wrap_model(model).get_parameters(deepcopy=True).as_numpy())
+        self.next_idx += 1
+
+    def get_trajectory(self) -> list:
+        """
+        WARNING: be aware that full trajectory tracking requires N * M memory, where N is the
+        number of iterations tracked and M is the size of the model. The amount of memory used
+        by the trajectory tracker can easily become very large.
+        :return: list of numpy arrays
+        """
+        return [self[idx] for idx in range(self.next_idx)]
 
 
 class ProjectingTrajectoryTracker(TrajectoryTracker):
@@ -87,6 +97,7 @@ class ProjectingTrajectoryTracker(TrajectoryTracker):
     """
     def __init__(self, model, n_bases=2):
         super().__init__()
+        self.trajectory = []
 
         n = wrap_model(model).get_parameters().numel()
         self.A = np.column_stack(
@@ -98,6 +109,9 @@ class ProjectingTrajectoryTracker(TrajectoryTracker):
 
     def get_item(self, timestep) -> np.ndarray:
         return self.__getitem__(timestep)
+
+    def get_trajectory(self) -> list:
+        return self.trajectory
 
     def save_position(self, model):
         # we solve the equation Ax = b using least squares, where A is the matrix of basis vectors
