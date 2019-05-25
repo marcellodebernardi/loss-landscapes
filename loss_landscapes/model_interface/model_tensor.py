@@ -173,29 +173,61 @@ class ParameterTensor(ABC):
         pass
 
     @abstractmethod
-    def model_normalize_(self, order=2):
+    def model_normalize_(self, ref_point=None, order=2):
         """
         In-place model-wise normalization of the tensor.
+        :param ref_point: use this model's norm, if given
         :param order: norm order, e.g. 2 for L2 norm
         :return: none
         """
         pass
 
     @abstractmethod
-    def layer_normalize_(self, order=2):
+    def layer_normalize_(self, ref_point=None, order=2):
         """
         In-place layer-wise normalization of the tensor.
+        :param ref_point: use this model's layer norms, if given
         :param order: norm order, e.g. 2 for L2 norm
         :return: none
         """
         pass
 
     @abstractmethod
-    def filter_normalize_(self, order=2):
+    def filter_normalize_(self, ref_point=None, order=2):
         """
         In-place filter-wise normalization of the tensor.
+        :param ref_point: use this model's filter norms, if given
         :param order: norm order, e.g. 2 for L2 norm
         :return: none
+        """
+        pass
+
+    @abstractmethod
+    def model_norm(self, order=2) -> float:
+        """
+        Returns the model-wise L-norm of the tensor.
+        :param order: norm order, e.g. 2 for L2 norm
+        :return: L-norm of tensor
+        """
+        pass
+
+    @abstractmethod
+    def layer_norm(self, index: int, order=2) -> float:
+        """
+        Returns a list of layer-wise L-norms of the tensor.
+        :param order: norm order, e.g. 2 for L2 norm
+        :param index: layer index
+        :return: list of L-norms of layers
+        """
+        pass
+
+    @abstractmethod
+    def filter_norm(self, index: tuple, order=2) -> float:
+        """
+        Returns a 2D list of filter-wise L-norms of the tensor.
+        :param order: norm order, e.g. 2 for L2 norm
+        :param index: tuple with layer index and filter index
+        :return: list of L-norms of filters
         """
         pass
 
@@ -213,35 +245,6 @@ class ParameterTensor(ABC):
         Returns a flattened view of the tensor which shares the underlying elements. Note the
         aliasing of the tensor/vector elements.
         :return: flat view of the tensor
-        """
-        pass
-
-    @abstractmethod
-    def _model_norm(self, order=2) -> float:
-        """
-        Returns the model-wise L-norm of the tensor.
-        :param order: norm order, e.g. 2 for L2 norm
-        :return: L-norm of tensor
-        """
-        pass
-
-    @abstractmethod
-    def _layer_norm(self, index: int, order=2) -> float:
-        """
-        Returns a list of layer-wise L-norms of the tensor.
-        :param order: norm order, e.g. 2 for L2 norm
-        :param index: layer index
-        :return: list of L-norms of layers
-        """
-        pass
-
-    @abstractmethod
-    def _filter_norm(self, index: tuple, order=2) -> float:
-        """
-        Returns a 2D list of filter-wise L-norms of the tensor.
-        :param order: norm order, e.g. 2 for L2 norm
-        :param index: tuple with layer index and filter index
-        :return: list of L-norms of filters
         """
         pass
 
