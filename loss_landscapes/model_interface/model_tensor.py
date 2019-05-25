@@ -1,5 +1,6 @@
 import copy
 from abc import ABC, abstractmethod
+import numpy as np
 import loss_landscapes.model_interface.model_vector as model_vector
 
 
@@ -14,6 +15,15 @@ class ParameterTensor(ABC):
         """
         Returns the number of model layers within the parameter tensor.
         :return: number of layer tensors
+        """
+        pass
+
+    @abstractmethod
+    def numel(self) -> int:
+        """
+        Returns the number of elements (i.e. individual parameters) within the tensor.
+        Note that this refers to individual parameters, not layers.
+        :return: number of elements in tensor
         """
         pass
 
@@ -190,6 +200,23 @@ class ParameterTensor(ABC):
         pass
 
     @abstractmethod
+    def as_numpy(self) -> np.ndarray:
+        """
+        Returns the tensor as a flat numpy array.
+        :return: a numpy array
+        """
+        pass
+
+    @abstractmethod
+    def as_vector(self) -> model_vector.ParameterVector:
+        """
+        Returns a flattened view of the tensor which shares the underlying elements. Note the
+        aliasing of the tensor/vector elements.
+        :return: flat view of the tensor
+        """
+        pass
+
+    @abstractmethod
     def _model_norm(self, order=2) -> float:
         """
         Returns the model-wise L-norm of the tensor.
@@ -215,23 +242,6 @@ class ParameterTensor(ABC):
         :param order: norm order, e.g. 2 for L2 norm
         :param index: tuple with layer index and filter index
         :return: list of L-norms of filters
-        """
-        pass
-
-    @abstractmethod
-    def as_numpy_list(self) -> list:
-        """
-        Returns the tensor as a list of numpy arrays.
-        :return: list of numpy arrays
-        """
-        pass
-
-    @abstractmethod
-    def as_vector(self) -> model_vector.ParameterVector:
-        """
-        Returns a flattened view of the tensor which shares the underlying elements. Note the
-        aliasing of the tensor/vector elements.
-        :return: flat view of the tensor
         """
         pass
 

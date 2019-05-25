@@ -4,58 +4,78 @@ a low-dimensional approximation of the trajectory.
 """
 
 
+from abc import ABC, abstractmethod
 import numpy as np
-from loss_landscapes.model_interface.model_tensor import ParameterTensor
-from loss_landscapes.model_interface.model_agnostic_factories import wrap_model, rand_u_like
+from loss_landscapes.model_interface.model_agnostic_factories import wrap_model
 
 
-class TrajectoryTracker:
+class TrajectoryTracker(ABC):
+    """
+    A TrajectoryTracker facilitates tracking the optimization trajectory of a
+    DL/RL model. Trajectory trackers provide facilities for storing model parameters
+    as well as for retrieving and operating on stored parameters.
+    """
     def __init__(self):
         # trajectory is a list of ParameterVector objects
         self.trajectory = []
 
-    def __getitem__(self, timestep) -> ParameterTensor:
+    @abstractmethod
+    def __getitem__(self, timestep) -> np.ndarray:
         """
-        Returns the model parameters from the given training timestep as a ParameterVector.
+        Returns the position of the model from the given training timestep as a numpy array.
         :param timestep: training step of parameters to retrieve
-        :return: ParameterVector
+        :return: numpy array
         """
-        return self.trajectory[timestep]
+        pass
 
+    @abstractmethod
+    def get_item(self, timestep) -> np.ndarray:
+        """
+        Returns the position of the model from the given training timestep as a numpy array.
+        :param timestep: training step of parameters to retrieve
+        :return: numpy array
+        """
+        pass
+
+    @abstractmethod
     def save_position(self, model):
         """
         Appends the current model parameterization to the stored training trajectory.
         :param model: model object with current state of interest
         :return: N/A
         """
-        self.trajectory.append(wrap_model(model).get_parameters())
+        pass
 
-    def get_trajectory(self) -> np.ndarray:
+    def get_trajectory(self) -> list:
         """
         Returns a reference to the currently stored trajectory.
         :return: numpy array
         """
-        return np.stack([p.numpy() for p in self.trajectory])
+        return self.trajectory
 
-    def get_reduced_trajectory(self, directions='random') -> np.ndarray:
-        coordinates = []
 
-        # todo is sampling each parameter independently equivalent to sampling direction uniformly?
-        if directions == 'random':
-            dir_x = rand_u_like(self.trajectory[0])
-            dir_y = rand_u_like(self.trajectory[0])
-        elif directions == 'pca':
-            raise NotImplementedError('PCA not yet implemented.')
-        else:
-            raise NotImplementedError('Unsupported direction selection method.')
+class ReducedTrajectoryTracker(TrajectoryTracker):
+    """
+    A ReducedTrajectoryTracker is a tracker which applies dimensionality reduction to
+    all model parameterizations upon storage. This is particularly appropriate for large
+    models, where storing a history of points in the model's parameter space would be
+    unfeasible in terms of memory.
+    """
+    def __init__(self, model, n_bases=2):
+        super().__init__()
 
-        for parameter_vector in self.trajectory:
-            # solve system of equations Ax = b ... where A is n*2 matrix containing dir_x and dir_y
-            # and b is the resulting parameter vector. x is therefore the coefficients of the linear
-            # combination c_1 * dir_x + c_2 * dir_y = parameter_vector.
-            A = np.transpose(np.stack([dir_x, dir_y]))
-            b = parameter_vector.numpy()
-            x = np.linalg.lstsq(A, b)
-            coordinates.append(x)
+        n = wrap_model(model).get_parameters().numel()
+        self.A = np.column_stack(
+            [np.random.normal(size=n) for _ in range(n_bases)]
+        )
 
-        return np.array(coordinates)
+    def __getitem__(self, timestep) -> np.ndarray:
+        return self.trajectory[timestep]
+
+    def get_item(self, timestep) -> np.ndarray:
+        return self.__getitem__(timestep)
+
+    def save_position(self, model):
+        # we solve the equation Ax = b using least squares, where A is the matrix of basis vectors
+        b = wrap_model(model).get_parameters().as_numpy()
+        self.trajectory.append(np.linalg.lstsq(self.A, b))
