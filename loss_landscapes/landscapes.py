@@ -118,11 +118,11 @@ def random_line(model_start, evaluator: Evaluator, distance=0.1, steps=100, norm
     direction = rand_u_like(start_point)
 
     if normalization == 'model':
-        direction.model_normalize_()
+        direction.model_normalize_(start_point)
     elif normalization == 'layer':
-        direction.layer_normalize_()
+        direction.layer_normalize_(start_point)
     elif normalization == 'filter':
-        direction.filter_normalize_()
+        direction.filter_normalize_(start_point)
     elif normalization is None:
         pass
     else:
@@ -253,14 +253,14 @@ def random_plane(model, evaluator: Evaluator, distance=1, steps=20, normalizatio
     dir_two = rand_u_like(start_point)
 
     if normalization == 'model':
-        dir_one.model_normalize_()
-        dir_two.model_normalize_()
+        dir_one.model_normalize_(start_point)
+        dir_two.model_normalize_(start_point)
     elif normalization == 'layer':
-        dir_one.layer_normalize_()
-        dir_two.layer_normalize_()
+        dir_one.layer_normalize_(start_point)
+        dir_two.layer_normalize_(start_point)
     elif normalization == 'filter':
-        dir_one.filter_normalize_()
-        dir_two.filter_normalize_()
+        dir_one.filter_normalize_(start_point)
+        dir_two.filter_normalize_(start_point)
     elif normalization is None:
         pass
     else:

@@ -86,41 +86,46 @@ class TorchParameterTensor(model_tensor.ParameterTensor):
     def __matmul__(self, other) -> 'TorchParameterTensor':
         raise NotImplementedError()
 
-    def model_normalize_(self, order=2):
-        norm = self._model_norm(order)
+    def model_normalize_(self, ref_point=None, order=2):
+        norm = ref_point.model_norm(order) if ref_point is not None \
+            else self.model_norm(order)
         for parameter in self.parameters:
             parameter /= norm
 
-    def layer_normalize_(self, order=2):
+    def layer_normalize_(self, ref_point=None, order=2):
         # in-place normalize each parameter
         for layer_idx, parameter in enumerate(self.parameters, 0):
-            parameter /= self._layer_norm(layer_idx, order)
+            norm = ref_point.layer_norm(layer_idx, order) if ref_point is not None \
+                else self.layer_norm(layer_idx, order)
+            parameter /= norm
 
-    def filter_normalize_(self, order=2):
+    def filter_normalize_(self, ref_point=None, order=2):
         for l in range(len(self.parameters)):
             for f in range(len(self.parameters[l])):
-                self.parameters[l][f] /= self._filter_norm((l, f), order)
+                norm = ref_point.filter_norm((l, f), order) if ref_point is not None \
+                    else self.filter_norm((l, f), order)
+                self.parameters[l][f] /= norm
 
-    def as_numpy(self) -> np.ndarray:
-        return np.concatenate([p.numpy().flatten() for p in self.parameters])
-
-    def as_vector(self) -> torch_vector.TorchParameterVector:
-        raise NotImplementedError()  # todo
-
-    def _model_norm(self, order=2) -> float:
+    def model_norm(self, order=2) -> float:
         # L-n norm of model where we treat the model as a flat vector
         return math.pow(sum([
             torch.pow(layer, order).sum().item()
             for layer in self.parameters
         ]), 1.0 / order)
 
-    def _layer_norm(self, index, order=2) -> float:
+    def layer_norm(self, index, order=2) -> float:
         # L-n norms of layer where we treat each layer as a flat vector
         return math.pow(torch.pow(self.parameters[index], order).sum().item(), 1.0 / order)
 
-    def _filter_norm(self, index, order=2) -> float:
+    def filter_norm(self, index, order=2) -> float:
         # L-n norm of each filter where we treat each layer as a flat vector
         return math.pow(torch.pow(self.parameters[index[0]][index[1]], order).sum().item(), 1.0 / order)
+
+    def as_numpy(self) -> np.ndarray:
+        return np.concatenate([p.numpy().flatten() for p in self.parameters])
+
+    def as_vector(self) -> torch_vector.TorchParameterVector:
+        raise NotImplementedError()  # todo
 
     def _get_parameters(self) -> list:
         return self.parameters
