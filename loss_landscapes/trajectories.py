@@ -54,6 +54,30 @@ class TrajectoryTracker(ABC):
         return self.trajectory
 
 
+class FullTrajectoryTracker(TrajectoryTracker):
+    """
+    A FullTrajectoryTracker is a tracker which stores a history of points in the tracked
+    model's original parameter space, and can be used to perform a variety of computations
+    on the trajectory.
+
+    WARNING: be aware that full trajectory tracking requires N * M memory, where N is the
+    number of iterations tracked and M is the size of the model. The amount of memory used
+    by the trajectory tracker can easily become very large.
+    """
+    def __init__(self, model):
+        super().__init__()
+        self.trajectory.append(wrap_model(model).get_parameters(deepcopy=True).as_numpy())
+
+    def __getitem__(self, timestep) -> np.ndarray:
+        return self.trajectory[timestep]
+
+    def get_item(self, timestep) -> np.ndarray:
+        return self.__getitem__(timestep)
+
+    def save_position(self, model):
+        self.trajectory.append(wrap_model(model).get_parameters(deepcopy=True).as_numpy())
+
+
 class ReducedTrajectoryTracker(TrajectoryTracker):
     """
     A ReducedTrajectoryTracker is a tracker which applies dimensionality reduction to
