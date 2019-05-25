@@ -10,6 +10,7 @@ the '__' suffix to the name of in-place operations.
 """
 
 import math
+import numpy as np
 import torch
 import torch.nn
 import loss_landscapes.model_interface.model_tensor as model_tensor
@@ -25,6 +26,9 @@ class TorchParameterTensor(model_tensor.ParameterTensor):
 
     def __len__(self) -> int:
         return len(self.parameters)
+
+    def numel(self) -> int:
+        return sum(p.numel() for p in self.parameters)
 
     def __getitem__(self, index) -> torch.nn.Parameter:
         return self.parameters[index]
@@ -97,6 +101,12 @@ class TorchParameterTensor(model_tensor.ParameterTensor):
             for f in range(len(self.parameters[l])):
                 self.parameters[l][f] /= self._filter_norm((l, f), order)
 
+    def as_numpy(self) -> np.ndarray:
+        return np.concatenate([p.numpy().flatten() for p in self.parameters])
+
+    def as_vector(self) -> torch_vector.TorchParameterVector:
+        raise NotImplementedError()  # todo
+
     def _model_norm(self, order=2) -> float:
         # L-n norm of model where we treat the model as a flat vector
         return math.pow(sum([
@@ -111,14 +121,6 @@ class TorchParameterTensor(model_tensor.ParameterTensor):
     def _filter_norm(self, index, order=2) -> float:
         # L-n norm of each filter where we treat each layer as a flat vector
         return math.pow(torch.pow(self.parameters[index[0]][index[1]], order).sum().item(), 1.0 / order)
-
-    def as_numpy_list(self) -> list:
-        # list of numpy arrays
-        return [p.clone().detach().numpy() for p in self.parameters]
-
-    def as_vector(self) -> torch_vector.TorchParameterVector:
-        # todo once figured out if vector view is useful
-        raise NotImplementedError()
 
     def _get_parameters(self) -> list:
         return self.parameters
