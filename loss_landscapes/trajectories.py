@@ -78,4 +78,4 @@ class ReducedTrajectoryTracker(TrajectoryTracker):
     def save_position(self, model):
         # we solve the equation Ax = b using least squares, where A is the matrix of basis vectors
         b = wrap_model(model).get_parameters().as_numpy()
-        self.trajectory.append(np.linalg.lstsq(self.A, b))
+        self.trajectory.append(np.linalg.lstsq(self.A, b, rcond=None)[0])
