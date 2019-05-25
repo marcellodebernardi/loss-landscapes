@@ -78,9 +78,9 @@ class FullTrajectoryTracker(TrajectoryTracker):
         self.trajectory.append(wrap_model(model).get_parameters(deepcopy=True).as_numpy())
 
 
-class ReducedTrajectoryTracker(TrajectoryTracker):
+class ProjectingTrajectoryTracker(TrajectoryTracker):
     """
-    A ReducedTrajectoryTracker is a tracker which applies dimensionality reduction to
+    A ProjectingTrajectoryTracker is a tracker which applies dimensionality reduction to
     all model parameterizations upon storage. This is particularly appropriate for large
     models, where storing a history of points in the model's parameter space would be
     unfeasible in terms of memory.
