@@ -10,10 +10,11 @@ class Evaluator(ABC):
         pass
 
 
-class EvaluatorPipeline(Evaluator):
+class EvaluatorPipeline(Evaluator, ABC):
     def __init__(self, evaluators: list):
         super().__init__()
         self.evaluators = evaluators
 
+    @abstractmethod
     def __call__(self, model) -> tuple:
-        return tuple([eval_f(model) for eval_f in self.evaluators])
+        pass
