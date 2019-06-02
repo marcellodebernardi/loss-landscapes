@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 import torch
 import torch.autograd
-from loss_landscapes.common.evaluators.evaluator import Evaluator
+from loss_landscapes.common.evaluators.evaluators import Evaluator
 from loss_landscapes.common.model_interface.model_agnostic_factories import wrap_model, rand_u_like
 from loss_landscapes.common.model_interface.torch.torch_wrappers import TorchNamedParameterWrapper
 
