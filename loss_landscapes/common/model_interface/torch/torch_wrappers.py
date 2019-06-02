@@ -7,8 +7,8 @@ from abc import ABC
 
 import torch
 import torch.nn
-import loss_landscapes.model_interface.model_wrapper as model_wrapper
-import loss_landscapes.model_interface.torch.torch_tensor as torch_tensor
+import common.model_interface.model_wrapper as model_wrapper
+import common.model_interface.torch.torch_tensor as torch_tensor
 
 
 class TorchModelWrapper(model_wrapper.ModelWrapper, ABC):

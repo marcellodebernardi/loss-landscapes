@@ -1,5 +1,5 @@
 import abc
-import loss_landscapes.model_interface.model_tensor as model_tensor
+import loss_landscapes.common.model_interface.model_tensor as model_tensor
 
 
 class ModelWrapper(abc.ABC):
