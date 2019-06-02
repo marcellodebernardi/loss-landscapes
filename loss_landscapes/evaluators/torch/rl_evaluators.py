@@ -33,17 +33,17 @@ class CumulativeReturnEvaluator(GymEvaluator):
     def __init__(self, env, n_samples=15, max_episode_length=None):
         super().__init__(env, n_samples, max_episode_length)
 
-    def __call__(self, agent):
+    def __call__(self, agent_act_fn):
         self.env.reset()
         cumulative_return = 0
 
         for _ in range(self.n_samples):
-            obs, reward, done, info = self.env.step(agent.act(self.env.reset()))
+            obs, reward, done, info = self.env.step(agent_act_fn(self.env.reset()))
             cumulative_return += reward
             t = 0
 
             while not done and t != self.max_episode_length:
-                action = agent.act(obs)
+                action = agent_act_fn(obs)
                 obs, reward, done, info = self.env.step(action)
 
                 cumulative_return += reward
