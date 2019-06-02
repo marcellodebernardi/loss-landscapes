@@ -1,7 +1,7 @@
 import copy
 from abc import ABC, abstractmethod
 import numpy as np
-import loss_landscapes.model_interface.model_vector as model_vector
+import loss_landscapes.common.model_interface.model_vector as model_vector
 
 
 class ParameterTensor(ABC):

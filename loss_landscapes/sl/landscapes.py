@@ -4,8 +4,8 @@ Functions for approximating landscapes in one and two dimensions.
 
 import copy
 import numpy as np
-from loss_landscapes.model_interface.model_agnostic_factories import wrap_model, rand_u_like
-from loss_landscapes.evaluators.evaluator import Evaluator
+from loss_landscapes.common.model_interface.model_agnostic_factories import wrap_model, rand_u_like
+from loss_landscapes.common.evaluators.evaluator import Evaluator
 
 
 def point(model, evaluator: Evaluator) -> tuple:
