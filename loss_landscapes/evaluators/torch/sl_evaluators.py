@@ -17,7 +17,7 @@ from loss_landscapes.model_interface.torch.torch_wrappers import TorchNamedParam
 from loss_landscapes.model_interface.torch.torch_tensor import rand_u_like
 
 
-class SupervisedTorchEvaluator(Evaluator, ABC):
+class TorchSupervisedEvaluator(Evaluator, ABC):
     """ Abstract class for PyTorch supervised learning loss evaluation functions. """
     def __init__(self, supervised_loss_fn, inputs, target):
         super().__init__()
@@ -30,7 +30,7 @@ class SupervisedTorchEvaluator(Evaluator, ABC):
         pass
 
 
-class LossEvaluator(SupervisedTorchEvaluator):
+class LossEvaluator(TorchSupervisedEvaluator):
     """ Computes a specified loss function over specified input-output pairs. """
     def __init__(self, supervised_loss_fn, inputs, target):
         super().__init__(supervised_loss_fn, inputs, target)
@@ -39,7 +39,7 @@ class LossEvaluator(SupervisedTorchEvaluator):
         return self.loss_fn(model(self.inputs), self.target).clone().detach().numpy()
 
 
-class LossPerturbationEvaluator(SupervisedTorchEvaluator):
+class LossPerturbationEvaluator(TorchSupervisedEvaluator):
     """
     Computes perturbations in the loss value along a sample of random directions.
     These perturbations can be used to reason probabilistically about the curvature
@@ -66,7 +66,7 @@ class LossPerturbationEvaluator(SupervisedTorchEvaluator):
         return np.array(results)
 
 
-class GradientEvaluator(SupervisedTorchEvaluator):
+class GradientEvaluator(TorchSupervisedEvaluator):
     """
     Computes the gradient of a specified loss function w.r.t. the model parameters
     over specified input-output pairs.
@@ -149,7 +149,7 @@ class GradientEvaluator(SupervisedTorchEvaluator):
 #             return np.array((curvatures >= 0).sum() / curvatures.size())
 
 
-class GradientPredictivenessEvaluator(SupervisedTorchEvaluator):
+class GradientPredictivenessEvaluator(TorchSupervisedEvaluator):
     """
     Computes the L2 norm of the distance between loss gradients at consecutive
     iterations. We consider a gradient to be predictive if a move in the direction
@@ -176,7 +176,7 @@ class GradientPredictivenessEvaluator(SupervisedTorchEvaluator):
             return np.linalg.norm(current_grad - previous_grad, ord=2)
 
 
-class BetaSmoothnessEvaluator(SupervisedTorchEvaluator):
+class BetaSmoothnessEvaluator(TorchSupervisedEvaluator):
     """
     Computes the "beta-smoothness" of the gradients, as characterized by
     Santurkar et al (2018). The beta-smoothness of a function at any given point
@@ -218,7 +218,7 @@ class BetaSmoothnessEvaluator(SupervisedTorchEvaluator):
             return np.linalg.norm(current_grad - previous_grad, ord=2) / np.linalg.norm(current_p - previous_p, ord=2)
 
 
-class PlateauEvaluator(SupervisedTorchEvaluator):
+class PlateauEvaluator(TorchSupervisedEvaluator):
     """
     Evaluator that computes the ratio between the change in loss and the change in parameters.
     Large changes in parameters with little change in loss indicates a plateau
