@@ -13,8 +13,8 @@ import math
 import numpy as np
 import torch
 import torch.nn
-import common.model_interface.model_tensor as model_tensor
-import common.model_interface.torch.torch_vector as torch_vector
+import loss_landscapes.common.model_interface.model_tensor as model_tensor
+import loss_landscapes.common.model_interface.torch.torch_vector as torch_vector
 
 
 class TorchParameterTensor(model_tensor.ParameterTensor):
