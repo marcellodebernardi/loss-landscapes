@@ -12,7 +12,6 @@ import numpy as np
 import torch
 import torch.autograd
 from loss_landscapes.common.evaluators.evaluators import Evaluator, EvaluatorPipeline
-from loss_landscapes.common.evaluators.evaluators import Evaluator
 from loss_landscapes.common.model_interface.wrapper_factory import wrap_model
 from loss_landscapes.common.model_interface.tensor_factory import rand_u_like
 from loss_landscapes.common.model_interface.torch.torch_wrappers import TorchModelWrapper
