@@ -8,7 +8,7 @@ et al.'s Automated Nudged Elastic Band algorithm.
 import abc
 import copy
 import numpy as np
-from loss_landscapes.common.model_interface.model_agnostic_factories import wrap_model
+from loss_landscapes.common.model_interface.wrapper_factory import wrap_model
 
 
 class _ParametricCurve(abc.ABC):

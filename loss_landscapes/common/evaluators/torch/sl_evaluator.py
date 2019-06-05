@@ -11,13 +11,14 @@ from abc import ABC, abstractmethod
 import numpy as np
 import torch
 import torch.autograd
+from loss_landscapes.common.evaluators.evaluators import Evaluator, EvaluatorPipeline
 from loss_landscapes.common.evaluators.evaluators import Evaluator
-from loss_landscapes.common.model_interface.model_agnostic_factories import wrap_model, rand_u_like
-from loss_landscapes.common.model_interface.torch.torch_wrappers import TorchNamedParameterWrapper
+from loss_landscapes.common.model_interface.wrapper_factory import wrap_model
+from loss_landscapes.common.model_interface.tensor_factory import rand_u_like
+from loss_landscapes.common.model_interface.torch.torch_wrappers import TorchModelWrapper
 
 
 class TorchSupervisedEvaluator(Evaluator, ABC):
-    """ Abstract class for PyTorch supervised learning loss evaluation functions. """
     def __init__(self, supervised_loss_fn, inputs, target):
         super().__init__()
         self.loss_fn = supervised_loss_fn
@@ -26,6 +27,15 @@ class TorchSupervisedEvaluator(Evaluator, ABC):
 
     @abstractmethod
     def __call__(self, model):
+        pass
+
+
+class TorchSupervisedEvaluatorPipeline(EvaluatorPipeline, ABC):
+    def __init__(self, evaluators: list):
+        super().__init__(evaluators)
+
+    @abstractmethod
+    def __call__(self, model) -> tuple:
         pass
 
 
@@ -203,11 +213,11 @@ class BetaSmoothnessEvaluator(TorchSupervisedEvaluator):
     def __call__(self, model):
         if self.previous_parameters is None:
             self.previous_gradient = self.gradient_evaluator(model)
-            self.previous_parameters = TorchNamedParameterWrapper(model).get_parameters().numpy()
+            self.previous_parameters = TorchModelWrapper(model).get_parameters().numpy()
             return 0.0
         else:
             current_grad = self.gradient_evaluator(model)
-            current_p = TorchNamedParameterWrapper(model).get_parameters().numpy()
+            current_p = TorchModelWrapper(model).get_parameters().numpy()
             previous_grad = self.previous_gradient
             previous_p = self.previous_parameters
 

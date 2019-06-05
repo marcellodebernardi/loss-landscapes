@@ -7,7 +7,7 @@ a low-dimensional approximation of the trajectory.
 from abc import ABC, abstractmethod
 from datetime import datetime
 import numpy as np
-from loss_landscapes.common.model_interface.model_agnostic_factories import wrap_model
+from loss_landscapes.common.model_interface.wrapper_factory import wrap_model
 
 
 class TrajectoryTracker(ABC):
