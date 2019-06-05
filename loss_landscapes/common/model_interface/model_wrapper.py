@@ -3,13 +3,27 @@ import loss_landscapes.common.model_interface.model_tensor as model_tensor
 
 
 class ModelWrapper(abc.ABC):
-    @abc.abstractmethod
+    def __init__(self, model, forward_fn):
+        self.model = model
+        self.forward_fn = forward_fn
+
+    def forward(self, x):
+        """
+        Calls the model on the given inputs, and returns the model's output.
+        :param x: inputs to the model
+        :return: model output
+        """
+        if self.forward_fn is not None:
+            return self.forward_fn(self.model, x)
+        else:
+            return self.model(x)
+
     def get_model(self):
         """
         Return a reference to the model encapsulated in this wrapper.
         :return: wrapped model
         """
-        pass
+        return self.model
 
     @abc.abstractmethod
     def get_parameters(self, deepcopy=False) -> model_tensor.ParameterTensor:
