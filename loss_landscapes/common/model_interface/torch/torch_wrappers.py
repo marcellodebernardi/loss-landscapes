@@ -4,7 +4,6 @@ Defines functions for getting and setting the parameters of a model.
 
 import copy
 import inspect
-import torch
 import torch.nn
 import loss_landscapes.common.model_interface.model_wrapper as model_wrapper
 import loss_landscapes.common.model_interface.torch.torch_tensor as torch_tensor
