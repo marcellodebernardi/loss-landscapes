@@ -7,7 +7,7 @@ class ModelWrapper(abc.ABC):
         self.model = model
         self.forward_fn = forward_fn
 
-    def forward(self, x):
+    def __call__(self, x):
         """
         Calls the model on the given inputs, and returns the model's output.
         :param x: inputs to the model
