@@ -4,11 +4,23 @@ Functions for approximating landscapes in one and two dimensions.
 
 import copy
 import numpy as np
-from loss_landscapes.common.model_interface.model_agnostic_factories import wrap_model, rand_u_like
+from loss_landscapes.common.model_interface.wrapper_factory import wrap_model, rand_u_like
 from loss_landscapes.common.evaluators.evaluators import Evaluator
 
 
-def point(model, evaluator: Evaluator) -> tuple:
+# todo interface: there are three degrees of freedom:
+# 1. Structure of agent/model and what the parameters of interest are
+# 2. How to agent/model should be used once it's been modified
+# 3. How the agent/model's outputs should be evaluated
+# We cannot assume a default sequence for these three, but neither can we cover all
+# possibilities, so we need an "intermediate language" between each choice.
+
+# MODEL INTERFACE FOR PARAMETER EDITING: no matter what kind of agent/model you're given, wrap it (internal to lib)
+# AGENT_CALL FUNCTION: no matter how the agent works in relation to the editable parameters: call(agent, inputs)
+# EVALUATOR: call(agent) or call(agent_call_fn)
+
+
+def point(model, evaluator: Evaluator, caller=None) -> tuple:
     """
     Returns the computed value of the evaluation function applied to the model
     at a specific point in parameter space.
@@ -19,14 +31,16 @@ def point(model, evaluator: Evaluator) -> tuple:
 
     :param model: the model defining the point in parameter space
     :param evaluator: list of function of form evaluation_f(model), used to evaluate model loss
+    :param caller: callable of the form caller(model, input) that passes the input to the model and returns output
     :return: quantity specified by evaluation_f at point in parameter space
     """
-    return evaluator(model)
+    return evaluator(wrap_model(model, caller))
 
 
-def linear_interpolation(model_start, model_end, evaluator: Evaluator, steps=100, deepcopy_model=False) -> np.ndarray:
+def linear_interpolation(model_start, model_end, evaluator: Evaluator, caller=None, steps=100,
+                         deepcopy_model=False) -> np.ndarray:
     """
-    Returns the computed value of the evaluation function applied to the model 
+    Returns the computed value of the evaluation function applied to the model
     along a linear subspace of the parameter space defined by two end points.
 
     That is, given two models, for both of which the model's parameters define a
@@ -51,13 +65,14 @@ def linear_interpolation(model_start, model_end, evaluator: Evaluator, steps=100
     :param model_start: the model defining the start point of the line in parameter space
     :param model_end: the model defining the end point of the line in parameter space
     :param evaluator: list of function of form evaluation_f(model), used to evaluate model loss
+    :param caller: callable of the form caller(model, input) that passes the input to the model and returns output
     :param steps: at how many steps from start to end the model is evaluated
     :param deepcopy_model: indicates whether the method will deepcopy the model(s) to avoid aliasing
     :return: 1-d array of loss values along the line connecting start and end models
     """
     # create wrappers from deep copies to avoid aliasing if desired
-    model_start_wrapper = wrap_model(copy.deepcopy(model_start) if deepcopy_model else model_start)
-    end_model_wrapper = wrap_model(copy.deepcopy(model_end) if deepcopy_model else model_end)
+    model_start_wrapper = wrap_model(copy.deepcopy(model_start) if deepcopy_model else model_start, caller)
+    end_model_wrapper = wrap_model(copy.deepcopy(model_end) if deepcopy_model else model_end, caller)
 
     start_point = model_start_wrapper.get_parameters()
     end_point = end_model_wrapper.get_parameters()
@@ -67,15 +82,15 @@ def linear_interpolation(model_start, model_end, evaluator: Evaluator, steps=100
     for i in range(steps):
         # add a step along the line to the model parameters, then evaluate
         start_point.add_(direction)
-        data_values.append(evaluator(model_start_wrapper.get_model()))
+        data_values.append(evaluator(model_start_wrapper))
 
     return np.array(data_values)
 
 
-def random_line(model_start, evaluator: Evaluator, distance=0.1, steps=100, normalization='filter',
+def random_line(model_start, evaluator: Evaluator, caller=None, distance=0.1, steps=100, normalization='filter',
                 deepcopy_model=False) -> np.ndarray:
     """
-    Returns the computed value of the evaluation function applied to the model along a 
+    Returns the computed value of the evaluation function applied to the model along a
     linear subspace of the parameter space defined by a start point and a randomly sampled direction.
 
     That is, given a neural network model, whose parameters define a point in parameter
@@ -103,6 +118,7 @@ def random_line(model_start, evaluator: Evaluator, distance=0.1, steps=100, norm
 
     :param model_start: model to be evaluated, whose current parameters represent the start point
     :param evaluator: function of form evaluation_f(model), used to evaluate model loss
+    :param caller: callable of the form caller(model, input) that passes the input to the model and returns output
     :param distance: maximum distance in parameter space from the start point
     :param steps: at how many steps from start to end the model is evaluated
     :param normalization: normalization of direction vector, must be one of 'filter', 'layer', 'model'
@@ -110,7 +126,7 @@ def random_line(model_start, evaluator: Evaluator, distance=0.1, steps=100, norm
     :return: 1-d array of loss values along the randomly sampled direction
     """
     # create wrappers from deep copies to avoid aliasing if desired
-    model_start_wrapper = wrap_model(copy.deepcopy(model_start) if deepcopy_model else model_start)
+    model_start_wrapper = wrap_model(copy.deepcopy(model_start) if deepcopy_model else model_start, caller)
 
     # obtain start point in parameter space and random direction
     # random direction is randomly sampled, then normalized, and finally scaled by distance/steps
@@ -134,12 +150,12 @@ def random_line(model_start, evaluator: Evaluator, distance=0.1, steps=100, norm
     for i in range(steps):
         # add a step along the line to the model parameters, then evaluate
         start_point.add_(direction)
-        data_values.append(evaluator(model_start_wrapper.get_model()))
+        data_values.append(evaluator(model_start_wrapper))
 
     return np.array(data_values)
 
 
-def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: Evaluator, steps=20,
+def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: Evaluator, caller=None, steps=20,
                          deepcopy_model=False) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model along
@@ -171,13 +187,14 @@ def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: E
     :param model_end_one: the model representing the end point of the first direction defining the plane
     :param model_end_two: the model representing the end point of the second direction defining the plane
     :param evaluator: function of form evaluation_f(model), used to evaluate model loss
+    :param caller: callable of the form caller(model, input) that passes the input to the model and returns output
     :param steps: at how many steps from start to end the model is evaluated
     :param deepcopy_model: indicates whether the method will deepcopy the model(s) to avoid aliasing
     :return: 1-d array of loss values along the line connecting start and end models
     """
-    model_start_wrapper = wrap_model(copy.deepcopy(model_start) if deepcopy_model else model_start)
-    model_end_one_wrapper = wrap_model(copy.deepcopy(model_end_one) if deepcopy_model else model_end_one)
-    model_end_two_wrapper = wrap_model(copy.deepcopy(model_end_two) if deepcopy_model else model_end_two)
+    model_start_wrapper = wrap_model(copy.deepcopy(model_start) if deepcopy_model else model_start, caller)
+    model_end_one_wrapper = wrap_model(copy.deepcopy(model_end_one) if deepcopy_model else model_end_one, caller)
+    model_end_two_wrapper = wrap_model(copy.deepcopy(model_end_two) if deepcopy_model else model_end_two, caller)
 
     # compute direction vectors
     start_point = model_start_wrapper.get_parameters()
@@ -197,10 +214,10 @@ def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: E
             # so you can easily use in-place operations to move along dir_two
             if i % 2 == 0:
                 start_point.add_(dir_two)
-                data_column.append(evaluator(model_start_wrapper.get_model()))
+                data_column.append(evaluator(model_start_wrapper))
             else:
                 start_point.sub_(dir_two)
-                data_column.insert(0, evaluator(model_start_wrapper.get_model()))
+                data_column.insert(0, evaluator(model_start_wrapper))
 
         data_matrix.append(data_column)
         start_point.add_(dir_one)
@@ -208,7 +225,7 @@ def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: E
     return np.array(data_matrix)
 
 
-def random_plane(model, evaluator: Evaluator, distance=1, steps=20, normalization='filter',
+def random_plane(model, evaluator: Evaluator, caller=None, distance=1, steps=20, normalization='filter',
                  deepcopy_model=False) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model along a planar
@@ -240,13 +257,14 @@ def random_plane(model, evaluator: Evaluator, distance=1, steps=20, normalizatio
 
     :param model: the model defining the origin point of the plane in parameter space
     :param evaluator: function of form evaluation_f(model), used to evaluate model loss
+    :param caller: callable of the form caller(model, input) that passes the input to the model and returns output
     :param distance: maximum distance in parameter space from the start point
     :param steps: at how many steps from start to end the model is evaluated
     :param normalization: normalization of direction vectors, must be one of 'filter', 'layer', 'model'
     :param deepcopy_model: indicates whether the method will deepcopy the model(s) to avoid aliasing
     :return: 1-d array of loss values along the line connecting start and end models
     """
-    model_start_wrapper = wrap_model(copy.deepcopy(model) if deepcopy_model else model)
+    model_start_wrapper = wrap_model(copy.deepcopy(model) if deepcopy_model else model, caller)
 
     start_point = model_start_wrapper.get_parameters()
     dir_one = rand_u_like(start_point)
@@ -289,10 +307,10 @@ def random_plane(model, evaluator: Evaluator, distance=1, steps=20, normalizatio
             # so you can easily use in-place operations to move along dir_two
             if i % 2 == 0:
                 start_point.add_(dir_two)
-                data_column.append(evaluator(model_start_wrapper.get_model()))
+                data_column.append(evaluator(model_start_wrapper))
             else:
                 start_point.sub_(dir_two)
-                data_column.insert(0, evaluator(model_start_wrapper.get_model()))
+                data_column.insert(0, evaluator(model_start_wrapper))
 
         data_matrix.append(data_column)
         start_point.add_(dir_one)
