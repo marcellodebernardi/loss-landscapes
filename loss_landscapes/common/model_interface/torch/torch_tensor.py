@@ -14,7 +14,6 @@ import numpy as np
 import torch
 import torch.nn
 import loss_landscapes.common.model_interface.model_tensor as model_tensor
-import loss_landscapes.common.model_interface.torch.torch_vector as torch_vector
 
 
 class TorchParameterTensor(model_tensor.ParameterTensor):
@@ -123,9 +122,6 @@ class TorchParameterTensor(model_tensor.ParameterTensor):
 
     def as_numpy(self) -> np.ndarray:
         return np.concatenate([p.numpy().flatten() for p in self.parameters])
-
-    def as_vector(self) -> torch_vector.TorchParameterVector:
-        raise NotImplementedError()  # todo
 
     def _get_parameters(self) -> list:
         return self.parameters
