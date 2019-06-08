@@ -10,20 +10,27 @@ import loss_landscapes.common.model_interface.torch.torch_tensor as torch_tensor
 
 
 class TorchModelWrapper(model_wrapper.ModelWrapper):
-    def __init__(self, model: torch.nn.Module, forward_fn=None):
+    def __init__(self, model, get_param_fn=None, forward_fn=None):
         """
         Construct a model wrapper which only exposes and operates on the underlying
         model's parameters (torch.nn.Module.parameters()).
 
         :param model: model to wrap
         """
-        super().__init__(model, forward_fn)
-        self.modules = _find_modules(model)
+        super().__init__(model, get_param_fn, forward_fn)
+        self.modules = self.get_components_fn() if self.get_components_fn is not None else self.model
+
         # each tuple identifies a specific parameter; this list defines the ordering of ParameterTensors
         self.parameter_names = [(module_index, parameter_name)
                                 for module_index, module in enumerate(self.modules, 0)
                                 for parameter_name, _ in module.named_parameters()
                                 ]
+
+    def forward(self, x):
+        if self.forward_fn is not None:
+            return self.forward_fn(self.model, x)
+        else:
+            return self.model(x)
 
     def get_parameters(self, deepcopy=False) -> 'torch_tensor.TorchParameterTensor':
         """
@@ -58,18 +65,3 @@ class TorchModelWrapper(model_wrapper.ModelWrapper):
                     new_state_dict[param_name] = new_parameters[j]
             # load new state dictionary
             module.load_state_dict(new_state_dict)
-
-
-def _find_modules(model, recursion_depth=1) -> []:
-    modules = []
-
-    type_hierarchy = [c.__module__ + '.' + c.__name__ for c in inspect.getmro(type(model))]
-    # if current object is a torch module, return it
-    if 'torch.nn.modules.module.Module' in type_hierarchy:
-        modules.append(model)
-    # if it is not, but recursion depth is not yet zero, recurse on children
-    elif recursion_depth != 0:
-        for obj in dir(model):
-            modules.extend(_find_modules(obj, recursion_depth - 1))
-
-    return modules
