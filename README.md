@@ -74,35 +74,37 @@ dependent on model parameters the user is interested in evaluating , and how to 
 for example, an evaluator that computes an estimate of the expected return of a reinforcement learning agent.
 
 
-## 4. Model Wrappers
-In the general case, client code calls functions such as `loss_landscapes.linear_interpolation` and passes as
-argument a reference to a deep learning model. The library implementation wraps the model using a `ModelWrapper` -
-an abstraction layer that hides the model's implementation details, which are specific to the DL library being
-used in the client code. This process is not visible to the user and in most cases can safely be ignored.
+## 4. RL Agents and Other Complications
+In the general case of a simple supervised learning model, as in the sections above, client code calls functions 
+such as `loss_landscapes.linear_interpolation` and passes as argument a reference to a deep learning model. The 
+`loss-landscapes` library detects the DL library to which the model belongs. This process is not visible to the
+user and in most cases can safely be ignored.
 
 For more complex cases, such as when the user wants to evaluate the loss landscape as a function of a subset of
-the model parameters, the user can import a model wrapper from the `loss_landscapes.model_interface` package and
-explicitly wrap it before passing it to a function such as `linear_interpolation`. Some of the wrappers allow for
-highly granular control over which model parameters are ignored.
+the model parameters, or the expected return landscape for a RL model, the user must specify to the `loss-landscapes`
+library how to interface with the model (or the agent, on a more general level). This is accomplished using a
+`AgentInterface` object. In the example below, the `AgentInterface` specifies the means by which the `random_plane`
+method will interface with a particular reinforcement learning agent, such that the agent object contains neural
+network models.
+
+````python
+# agent.policy and agent.value_function are pytorch modules
+interface = AgentInterface(library='torch', components=[agent.policy, agent.value_function], call_fn= lambda x: model.policy(x))
+landscape = random_plane(agent, evaluator, normalize='filter')
+````
 
 
-## 5. Trajectory Tracking
-The library also enables trajectory tracking in a simple, model-agnostic fashion. A `TrajectoryTracker` object
+
+## 5. WIP: Trajectory Tracking, Connecting Paths, and Saddle Points
+A number of features are currently under development, but as of yet incomplete.
+
+1. The library will enable trajectory tracking in a simple, model-agnostic fashion. A `TrajectoryTracker` object
 stores a model parameter history, which the user can update by passing the model to the tracker, which extracts
 the model's current state and appends it to the trajectory history.
-
-More importantly, a trajectory tracker can compute low-dimensional approximations of the trajectory, using random
-directions, PCA directions (see Li et al., 2018), and so on. A good use case for trajectory tracking is to overlay
-the optimization trajectory on a landscape contour plot, which can easily be accomplished using `matplotlib`.
-
-
-## 6. Work in Progress: Connecting Paths and Saddle Points
-A number of papers in recent years have shown that loss landscapes of neural networks are dominated by a
+2. A number of papers in recent years have shown that loss landscapes of neural networks are dominated by a
 proliferation of saddle points, that good solutions are better described as large low-loss plateaus than as
 "well-bottom" points, and that for sufficiently high-dimensional networks, a low-loss path in parameter space can
-be found between almost any arbitrary pair of minima.
-
-In the future, the `loss-landscapes` library will feature implementations of algorithms for finding such low-loss
+be found between almost any arbitrary pair of minima. In the future, the `loss-landscapes` library will feature implementations of algorithms for finding such low-loss
 connecting paths in the loss landscape, as well as tools to facilitate the study of saddle points.
 
 
