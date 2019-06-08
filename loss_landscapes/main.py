@@ -1,5 +1,5 @@
 """
-Functions for approximating landscapes in one and two dimensions.
+Functions for approximating loss/return landscapes in one and two dimensions.
 """
 
 import copy
@@ -7,28 +7,22 @@ import numpy as np
 from loss_landscapes.common.model_interface.wrapper_factory import wrap_model
 from loss_landscapes.common.model_interface.tensor_factory import rand_u_like
 from loss_landscapes.common.evaluators.evaluators import Evaluator
+from loss_landscapes.common.model_interface.agent_interface import AgentInterface
 
 
-# todo interface: there are three degrees of freedom:
-# 1. Structure of agent/model and what the parameters of interest are
-# 2. How to agent/model should be used once it's been modified
-# 3. How the agent/model's outputs should be evaluated
-# We cannot assume a default sequence for these three, but neither can we cover all
-# possibilities, so we need an "intermediate language" between each choice.
-
-# MODEL INTERFACE FOR PARAMETER EDITING: no matter what kind of agent/model you're given, wrap it (internal to lib)
-# AGENT_CALL FUNCTION: no matter how the agent works in relation to the editable parameters: call(agent, inputs)
-# EVALUATOR: call(agent) or call(agent_call_fn)
-
-
-def point(model, evaluator: Evaluator, agent_interface=None) -> tuple:
+# noinspection DuplicatedCode
+def point(model, evaluator: Evaluator, agent_interface: AgentInterface = None) -> tuple:
     """
     Returns the computed value of the evaluation function applied to the model
-    at a specific point in parameter space.
+    or agent at a specific point in parameter space.
 
     The Evaluator supplied has to be a subclass of the evaluations.evaluator.Evaluator class,
     and must specify a procedure whereby the model passed to it is evaluated on the
     task of interest, returning the resulting quantity (such as loss, loss gradient, etc).
+
+    The AgentInterface is optional, and needs only be supplied if the 'model' argument
+    is not a simple NN model (such as a nn.Module in PyTorch), but rather a more complex
+    agent with an arbitrary interface and structure.
 
     :param model: the model defining the point in parameter space
     :param evaluator: list of function of form evaluation_f(model), used to evaluate model loss
@@ -38,11 +32,12 @@ def point(model, evaluator: Evaluator, agent_interface=None) -> tuple:
     return evaluator(wrap_model(model, agent_interface))
 
 
-def linear_interpolation(model_start, model_end, evaluator: Evaluator, agent_interface=None, steps=100,
-                         deepcopy_model=False) -> np.ndarray:
+# noinspection DuplicatedCode
+def linear_interpolation(model_start, model_end, evaluator: Evaluator, agent_interface: AgentInterface = None,
+                         steps=100, deepcopy_model=False) -> np.ndarray:
     """
-    Returns the computed value of the evaluation function applied to the model
-    along a linear subspace of the parameter space defined by two end points.
+    Returns the computed value of the evaluation function applied to the model or
+    agent along a linear subspace of the parameter space defined by two end points.
 
     That is, given two models, for both of which the model's parameters define a
     vertex in parameter space, the evaluation is computed at the given number of steps
@@ -62,6 +57,10 @@ def linear_interpolation(model_start, model_end, evaluator: Evaluator, agent_int
     The Evaluator supplied has to be a subclass of the evaluations.evaluator.Evaluator class,
     and must specify a procedure whereby the model passed to it is evaluated on the
     task of interest, returning the resulting quantity (such as loss, loss gradient, etc).
+
+    The AgentInterface is optional, and needs only be supplied if the 'model' argument
+    is not a simple NN model (such as a nn.Module in PyTorch), but rather a more complex
+    agent with an arbitrary interface and structure.
 
     :param model_start: the model defining the start point of the line in parameter space
     :param model_end: the model defining the end point of the line in parameter space
@@ -88,10 +87,11 @@ def linear_interpolation(model_start, model_end, evaluator: Evaluator, agent_int
     return np.array(data_values)
 
 
-def random_line(model_start, evaluator: Evaluator, agent_interface=None, distance=0.1, steps=100,
+# noinspection DuplicatedCode
+def random_line(model_start, evaluator: Evaluator, agent_interface: AgentInterface = None, distance=0.1, steps=100,
                 normalization='filter', deepcopy_model=False) -> np.ndarray:
     """
-    Returns the computed value of the evaluation function applied to the model along a
+    Returns the computed value of the evaluation function applied to the model or agent along a
     linear subspace of the parameter space defined by a start point and a randomly sampled direction.
 
     That is, given a neural network model, whose parameters define a point in parameter
@@ -116,6 +116,10 @@ def random_line(model_start, evaluator: Evaluator, agent_interface=None, distanc
     The Evaluator supplied has to be a subclass of the evaluations.evaluator.Evaluator class,
     and must specify a procedure whereby the model passed to it is evaluated on the
     task of interest, returning the resulting quantity (such as loss, loss gradient, etc).
+
+    The AgentInterface is optional, and needs only be supplied if the 'model' argument
+    is not a simple NN model (such as a nn.Module in PyTorch), but rather a more complex
+    agent with an arbitrary interface and structure.
 
     :param model_start: model to be evaluated, whose current parameters represent the start point
     :param evaluator: function of form evaluation_f(model), used to evaluate model loss
@@ -156,10 +160,11 @@ def random_line(model_start, evaluator: Evaluator, agent_interface=None, distanc
     return np.array(data_values)
 
 
-def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: Evaluator, agent_interface=None,
-                         steps=20, deepcopy_model=False) -> np.ndarray:
+# noinspection DuplicatedCode
+def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: Evaluator,
+                         agent_interface: AgentInterface = None, steps=20, deepcopy_model=False) -> np.ndarray:
     """
-    Returns the computed value of the evaluation function applied to the model along
+    Returns the computed value of the evaluation function applied to the model or agent along
     a planar subspace of the parameter space defined by a start point and two end points.
 
     That is, given two models, for both of which the model's parameters define a
@@ -183,6 +188,10 @@ def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: E
     The Evaluator supplied has to be a subclass of the evaluations.evaluator.Evaluator class,
     and must specify a procedure whereby the model passed to it is evaluated on the
     task of interest, returning the resulting quantity (such as loss, loss gradient, etc).
+
+    The AgentInterface is optional, and needs only be supplied if the 'model' argument
+    is not a simple NN model (such as a nn.Module in PyTorch), but rather a more complex
+    agent with an arbitrary interface and structure.
 
     :param model_start: the model defining the origin point of the plane in parameter space
     :param model_end_one: the model representing the end point of the first direction defining the plane
@@ -226,10 +235,11 @@ def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: E
     return np.array(data_matrix)
 
 
-def random_plane(model, evaluator: Evaluator, agent_interface=None, distance=1, steps=20, normalization='filter',
-                 deepcopy_model=False) -> np.ndarray:
+# noinspection DuplicatedCode
+def random_plane(model, evaluator: Evaluator, agent_interface: AgentInterface = None, distance=1, steps=20,
+                 normalization='filter', deepcopy_model=False) -> np.ndarray:
     """
-    Returns the computed value of the evaluation function applied to the model along a planar
+    Returns the computed value of the evaluation function applied to the model or agent along a planar
     subspace of the parameter space defined by a start point and two randomly sampled directions.
 
     That is, given a neural network model, whose parameters define a point in parameter
@@ -255,6 +265,10 @@ def random_plane(model, evaluator: Evaluator, agent_interface=None, distance=1, 
     The Evaluator supplied has to be a subclass of the evaluations.evaluator.Evaluator class,
     and must specify a procedure whereby the model passed to it is evaluated on the
     task of interest, returning the resulting quantity (such as loss, loss gradient, etc).
+
+    The AgentInterface is optional, and needs only be supplied if the 'model' argument
+    is not a simple NN model (such as a nn.Module in PyTorch), but rather a more complex
+    agent with an arbitrary interface and structure.
 
     :param model: the model defining the origin point of the plane in parameter space
     :param evaluator: function of form evaluation_f(model), used to evaluate model loss
