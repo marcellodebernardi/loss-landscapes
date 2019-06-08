@@ -3,10 +3,11 @@ import loss_landscapes.common.model_interface.model_tensor as model_tensor
 
 
 class ModelWrapper(abc.ABC):
-    def __init__(self, model, get_components_fn=None, forward_fn=None):
-        self.model = model                            # wrapped model
-        self.get_components_fn = get_components_fn    # how to get state
-        self.forward_fn = forward_fn                  # how to use model in evaluation
+    def __init__(self, model, components, layers, call_fn):
+        self.model = model                    # wrapped model
+        self.components = components          # how to get state
+        self.layers = layers                  # layers to include
+        self.forward_fn = call_fn             # how to use model in evaluation
 
     def get_model(self):
         """
@@ -16,7 +17,7 @@ class ModelWrapper(abc.ABC):
         return self.model
 
     @abc.abstractmethod
-    def forward(self, x):
+    def __call__(self, x):
         """
         Calls the model or agent on the given inputs, and returns the desired output.
         :param x: inputs to the model or agent

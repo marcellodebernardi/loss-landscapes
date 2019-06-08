@@ -4,7 +4,7 @@ Functions for approximating loss/return landscapes in one and two dimensions.
 
 import copy
 import numpy as np
-from loss_landscapes.common.model_interface.wrapper_factory import wrap_model
+from loss_landscapes.common.model_interface.agent_interface import wrap_model
 from loss_landscapes.common.model_interface.tensor_factory import rand_u_like
 from loss_landscapes.common.evaluators.evaluators import Evaluator
 from loss_landscapes.common.model_interface.agent_interface import AgentInterface

@@ -13,27 +13,35 @@ SUPPORTED_MODEL_TYPES = {
 
 class AgentInterface:
     """ Defines how to operate on an agent object that isn't just a neural network. """
-    def __init__(self, get_components_fn, forward_fn, library):
+    def __init__(self, library: str, components: list = None, layers: list = None, call_fn: callable = None):
         """
         Define an agent interface.
-        :param get_components_fn: function that returns a list of models pertaining to DL library is use
-        :param forward_fn: function of the form forward(model, x) that calls the model on input x
         :param library: string flag indicating which DL library the agent uses
+        :param components: list of models to be considered by the library
+        :param call_fn: function of the form forward(model, x) that calls the model on input x
+        :param layers: list of layers to be included - if none, all layers included
         """
         if library not in list(SUPPORTED_LIBRARIES.keys()):
             raise ValueError('Unrecognized library flag. Supported libraries: %s' % list(SUPPORTED_LIBRARIES.keys()))
         self.library = library
-        self.get_components_fn = get_components_fn
-        self.forward_fn = forward_fn
+        self.components = components
+        self.layers = layers
+        self.call_fn = call_fn
 
     def get_library(self):
         return self.library
 
-    def get_configuration(self):
-        return self.get_components_fn, self.forward_fn
+    def get_components(self):
+        return self.components
+
+    def get_layers(self):
+        return self.layers
+
+    def get_forward_fn(self):
+        return self.call_fn
 
 
-def wrap_model(model, agent_interface) -> model_wrapper.ModelWrapper:
+def wrap_model(model, agent_interface=None) -> model_wrapper.ModelWrapper:
     """
     Returns an appropriate wrapper for the given model. For example, if the
     model is a PyTorch model, returns a TorchModelWrapper for the model.
@@ -41,16 +49,30 @@ def wrap_model(model, agent_interface) -> model_wrapper.ModelWrapper:
     :param agent_interface: defines how to access components etc for complex agents
     :return: appropriate wrapper for model
     """
+    if isinstance(model, model_wrapper.ModelWrapper):
+        return model
+
+    if agent_interface is not None:
+        components = agent_interface.get_components()
+        layers = agent_interface.get_layers()
+        forward_fn = agent_interface.get_forward_fn()
+        library = agent_interface.get_library()
+    else:
+        components = None
+        layers = None
+        forward_fn = None
+        library = None
+
+    # assume straightforward model
     try:
         model_type = _identify_model_type(model)
-        return SUPPORTED_MODEL_TYPES[model_type](model, None, None)
     except TypeError:
         if agent_interface is not None:
-            library = agent_interface.get_library()
-            get_components_fn, forward_fn = agent_interface.get_configuration()
-            return SUPPORTED_MODEL_TYPES[library](model, get_components_fn, forward_fn)
+            model_type = library
         else:
-            raise ValueError('AgentInterface must be provided for unrecognized model types.')
+            raise ValueError('Unrecognized model type. AgentInterface must be provided for unrecognized model types.')
+
+    return SUPPORTED_MODEL_TYPES[model_type](model, components, layers, forward_fn)
 
 
 def _identify_model_type(obj):
