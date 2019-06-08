@@ -8,19 +8,24 @@ SUPPORTED_MODEL_TYPES = {
 }
 
 
-def wrap_model(model, forward_fn=None) -> model_wrapper.ModelWrapper:
+def wrap_model(model, agent_interface=None) -> model_wrapper.ModelWrapper:
     """
     Returns an appropriate wrapper for the given model. For example, if the
     model is a PyTorch model, returns a TorchModelWrapper for the model.
     :param model: model to wrap
-    :param forward_fn: function for obtaining model output
+    :param agent_interface: defines how to access components etc for complex agents
     :return: appropriate wrapper for model
     """
-    model_type = _identify_dl_library(model, recursion_depth=1)
-    return SUPPORTED_MODEL_TYPES[model_type](model, forward_fn)
+    try:
+        model_type = _identify_model_type(model)
+        return SUPPORTED_MODEL_TYPES[model_type](model)
+    except TypeError:
+        if agent_interface is not None:
+            get_components_fn, forward_fn = agent_interface.get_configuration()
+            return SUPPORTED_MODEL_TYPES[model_type](model, get_components_fn, forward_fn)
 
 
-def _identify_dl_library(obj, recursion_depth=1):
+def _identify_model_type(obj):
     type_hierarchy = [c.__module__ + '.' + c.__name__ for c in inspect.getmro(type(obj))]
 
     # if any of the supported model types are a match, import and return corresponding DL library
@@ -28,14 +33,5 @@ def _identify_dl_library(obj, recursion_depth=1):
         if model_type in type_hierarchy:
             return model_type
 
-    # if max recursion depth reached before type is identified, give up
-    if recursion_depth != 0:
-        # try all the attributes of the object
-        for o in dir(obj):
-            try:
-                return _identify_dl_library(o, recursion_depth - 1)
-            except TypeError:
-                pass
-
-    # if recursion depth reached or no attributes provided identification, give up
+    # if not a supported model type, give up
     raise TypeError('Unrecognized model type.')
