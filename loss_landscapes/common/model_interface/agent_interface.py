@@ -66,13 +66,13 @@ def wrap_model(model, agent_interface=None) -> model_wrapper.ModelWrapper:
     # assume straightforward model
     try:
         model_type = _identify_model_type(model)
+        return SUPPORTED_MODEL_TYPES[model_type](model, components, layers, forward_fn)
     except TypeError:
         if agent_interface is not None:
             model_type = library
+            return SUPPORTED_LIBRARIES[model_type](model, components, layers, forward_fn)
         else:
             raise ValueError('Unrecognized model type. AgentInterface must be provided for unrecognized model types.')
-
-    return SUPPORTED_MODEL_TYPES[model_type](model, components, layers, forward_fn)
 
 
 def _identify_model_type(obj):
