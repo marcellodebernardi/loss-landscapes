@@ -29,15 +29,6 @@ class TorchSupervisedEvaluator(Evaluator, ABC):
         pass
 
 
-class TorchSupervisedEvaluatorPipeline(EvaluatorPipeline, ABC):
-    def __init__(self, evaluators: list):
-        super().__init__(evaluators)
-
-    @abstractmethod
-    def __call__(self, model) -> tuple:
-        pass
-
-
 class LossEvaluator(TorchSupervisedEvaluator):
     """ Computes a specified loss function over specified input-output pairs. """
     def __init__(self, supervised_loss_fn, inputs, target):
