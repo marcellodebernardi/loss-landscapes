@@ -38,6 +38,49 @@ class LossEvaluator(TorchSupervisedEvaluator):
         return self.loss_fn(model(self.inputs), self.target).clone().detach().numpy()
 
 
+class GradientEvaluator(TorchSupervisedEvaluator):
+    """
+    Computes the gradient of a specified loss function w.r.t. the model parameters
+    over specified input-output pairs.
+    """
+    def __init__(self, supervised_loss_fn, inputs, target):
+        super().__init__(supervised_loss_fn, inputs, target)
+
+    def __call__(self, model) -> np.ndarray:
+        loss = self.loss_fn(model(self.inputs), self.target)
+        # for computing higher-order gradients, see https://github.com/pytorch/pytorch/releases/tag/v0.2.0
+        gradient = torch.autograd.grad(loss, model.parameters())
+        return gradient.detach().numpy()
+
+
+# noinspection DuplicatedCode
+class GradientPredictivenessEvaluator(TorchSupervisedEvaluator):
+    """
+    Computes the L2 norm of the distance between loss gradients at consecutive
+    iterations. We consider a gradient to be predictive if a move in the direction
+    of the gradient results in a similar gradient at the next step; that is, the
+    gradients of the loss change smoothly along the optimization trajectory.
+
+    This evaluator is inspired by experiments ran by Santurkar et al (2018), for
+    details see https://arxiv.org/abs/1805.11604
+    """
+    def __init__(self, supervised_loss_fn, inputs, target):
+        super().__init__(None, None, None)
+        self.gradient_evaluator = GradientEvaluator(supervised_loss_fn, inputs, target)
+        self.previous_gradient = None
+
+    def __call__(self, model) -> float:
+        if self.previous_gradient is None:
+            self.previous_gradient = self.gradient_evaluator(model)
+            return 0.0
+        else:
+            current_grad = self.gradient_evaluator(model)
+            previous_grad = self.previous_gradient
+            self.previous_gradient = current_grad
+            # return l2 distance of current and previous gradients
+            return np.linalg.norm(current_grad - previous_grad, ord=2)
+
+
 # noinspection DuplicatedCode
 class LossPerturbationEvaluator(TorchSupervisedEvaluator):
     """
@@ -66,19 +109,60 @@ class LossPerturbationEvaluator(TorchSupervisedEvaluator):
         return np.array(results)
 
 
-class GradientEvaluator(TorchSupervisedEvaluator):
+class BetaSmoothnessEvaluator(TorchSupervisedEvaluator):
     """
-    Computes the gradient of a specified loss function w.r.t. the model parameters
-    over specified input-output pairs.
+    Computes the "beta-smoothness" of the gradients, as characterized by
+    Santurkar et al (2018). The beta-smoothness of a function at any given point
+    is the ratio of the magnitude of the change in its gradients, over the magnitude
+    of the change in input. In the case of loss landscapes, it is the ratio of the
+    magnitude of the change in loss gradients over the magnitude of the change in
+    parameters. In general, we call a function f beta-smooth if
+
+        |f'(x) - f'(y)| < beta|x - y|
+
+    i.e. if there exists an upper bound beta on the ratio between change in gradients
+    and change in input. Santurkar et al call "effective beta-smoothness" the maximum
+    encountered ratio along some optimization trajectory.
+
+    This evaluator is inspired by experiments ran by Santurkar et al (2018), for
+    details see https://arxiv.org/abs/1805.11604
+    """
+
+    def __init__(self, supervised_loss_fn, inputs, target):
+        super().__init__(None, None, None)
+        self.gradient_evaluator = GradientEvaluator(supervised_loss_fn, inputs, target)
+        self.previous_gradient = None
+        self.previous_parameters = None
+
+    def __call__(self, model):
+        if self.previous_parameters is None:
+            self.previous_gradient = self.gradient_evaluator(model)
+            self.previous_parameters = TorchModelWrapper(model).get_parameters().numpy()
+            return 0.0
+        else:
+            current_grad = self.gradient_evaluator(model)
+            current_p = TorchModelWrapper(model).get_parameters().numpy()
+            previous_grad = self.previous_gradient
+            previous_p = self.previous_parameters
+
+            self.previous_gradient = current_grad
+            self.previous_parameters = current_p
+            # return l2 distance of current and previous gradients
+            return np.linalg.norm(current_grad - previous_grad, ord=2) / np.linalg.norm(current_p - previous_p, ord=2)
+
+
+class PlateauEvaluator(TorchSupervisedEvaluator):
+    """
+    Evaluator that computes the ratio between the change in loss and the change in parameters.
+    Large changes in parameters with little change in loss indicates a plateau
     """
     def __init__(self, supervised_loss_fn, inputs, target):
         super().__init__(supervised_loss_fn, inputs, target)
+        raise NotImplementedError()
 
-    def __call__(self, model) -> np.ndarray:
-        loss = self.loss_fn(model(self.inputs), self.target)
-        # for computing higher-order gradients, see https://github.com/pytorch/pytorch/releases/tag/v0.2.0
-        gradient = torch.autograd.grad(loss, model.parameters())
-        return gradient.detach().numpy()
+    def __call__(self, model):
+        # todo how to best characterize a plateau?
+        raise NotImplementedError()
 
 
 # todo - these are complicated by the fact that hessian matrix is of size O(n^2) in the number of NN params
@@ -147,87 +231,3 @@ class GradientEvaluator(TorchSupervisedEvaluator):
 #         # fraction of dimensions with positive curvature
 #         else:
 #             return np.array((curvatures >= 0).sum() / curvatures.size())
-
-
-# noinspection DuplicatedCode
-class GradientPredictivenessEvaluator(TorchSupervisedEvaluator):
-    """
-    Computes the L2 norm of the distance between loss gradients at consecutive
-    iterations. We consider a gradient to be predictive if a move in the direction
-    of the gradient results in a similar gradient at the next step; that is, the
-    gradients of the loss change smoothly along the optimization trajectory.
-
-    This evaluator is inspired by experiments ran by Santurkar et al (2018), for
-    details see https://arxiv.org/abs/1805.11604
-    """
-    def __init__(self, supervised_loss_fn, inputs, target):
-        super().__init__(None, None, None)
-        self.gradient_evaluator = GradientEvaluator(supervised_loss_fn, inputs, target)
-        self.previous_gradient = None
-
-    def __call__(self, model) -> float:
-        if self.previous_gradient is None:
-            self.previous_gradient = self.gradient_evaluator(model)
-            return 0.0
-        else:
-            current_grad = self.gradient_evaluator(model)
-            previous_grad = self.previous_gradient
-            self.previous_gradient = current_grad
-            # return l2 distance of current and previous gradients
-            return np.linalg.norm(current_grad - previous_grad, ord=2)
-
-
-class BetaSmoothnessEvaluator(TorchSupervisedEvaluator):
-    """
-    Computes the "beta-smoothness" of the gradients, as characterized by
-    Santurkar et al (2018). The beta-smoothness of a function at any given point
-    is the ratio of the magnitude of the change in its gradients, over the magnitude
-    of the change in input. In the case of loss landscapes, it is the ratio of the
-    magnitude of the change in loss gradients over the magnitude of the change in
-    parameters. In general, we call a function f beta-smooth if
-
-        |f'(x) - f'(y)| < beta|x - y|
-
-    i.e. if there exists an upper bound beta on the ratio between change in gradients
-    and change in input. Santurkar et al call "effective beta-smoothness" the maximum
-    encountered ratio along some optimization trajectory.
-
-    This evaluator is inspired by experiments ran by Santurkar et al (2018), for
-    details see https://arxiv.org/abs/1805.11604
-    """
-
-    def __init__(self, supervised_loss_fn, inputs, target):
-        super().__init__(None, None, None)
-        self.gradient_evaluator = GradientEvaluator(supervised_loss_fn, inputs, target)
-        self.previous_gradient = None
-        self.previous_parameters = None
-
-    def __call__(self, model):
-        if self.previous_parameters is None:
-            self.previous_gradient = self.gradient_evaluator(model)
-            self.previous_parameters = TorchModelWrapper(model).get_parameters().numpy()
-            return 0.0
-        else:
-            current_grad = self.gradient_evaluator(model)
-            current_p = TorchModelWrapper(model).get_parameters().numpy()
-            previous_grad = self.previous_gradient
-            previous_p = self.previous_parameters
-
-            self.previous_gradient = current_grad
-            self.previous_parameters = current_p
-            # return l2 distance of current and previous gradients
-            return np.linalg.norm(current_grad - previous_grad, ord=2) / np.linalg.norm(current_p - previous_p, ord=2)
-
-
-class PlateauEvaluator(TorchSupervisedEvaluator):
-    """
-    Evaluator that computes the ratio between the change in loss and the change in parameters.
-    Large changes in parameters with little change in loss indicates a plateau
-    """
-    def __init__(self, supervised_loss_fn, inputs, target):
-        super().__init__(supervised_loss_fn, inputs, target)
-        raise NotImplementedError()
-
-    def __call__(self, model):
-        # todo how to best characterize a plateau?
-        raise NotImplementedError()
