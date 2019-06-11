@@ -13,7 +13,7 @@ import math
 import numpy as np
 import torch
 import torch.nn
-import loss_landscapes.common.model_interface.model_tensor as model_tensor
+import loss_landscapes.model_interface.model_tensor as model_tensor
 
 
 class TorchParameterTensor(model_tensor.ParameterTensor):

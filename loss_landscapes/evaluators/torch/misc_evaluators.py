@@ -8,7 +8,7 @@ inspect the classification accuracy of a model under different parameter value a
 
 from abc import ABC, abstractmethod
 import torch.nn
-from loss_landscapes.common.evaluators.evaluators import Evaluator
+from loss_landscapes.evaluators.evaluators import Evaluator
 
 
 class TorchMetricEvaluator(Evaluator, ABC):

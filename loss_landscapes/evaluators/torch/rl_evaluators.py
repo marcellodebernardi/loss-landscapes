@@ -1,11 +1,7 @@
 from abc import ABC, abstractmethod
-import math
-import numpy as np
 import torch
 import torch.autograd
-from loss_landscapes.common.evaluators.evaluators import Evaluator
-from loss_landscapes.common.model_interface.tensor_factory import rand_u_like
-from loss_landscapes.common.model_interface.torch.torch_wrappers import TorchModelWrapper
+from loss_landscapes.evaluators.evaluators import Evaluator
 
 
 class TorchReinforcementEvaluator(Evaluator, ABC):

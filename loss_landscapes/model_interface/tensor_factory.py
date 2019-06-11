@@ -1,5 +1,5 @@
-import loss_landscapes.common.model_interface.model_tensor as model_tensor
-import loss_landscapes.common.model_interface.torch.torch_tensor as torch_tensor
+import loss_landscapes.model_interface.model_tensor as model_tensor
+import loss_landscapes.model_interface.torch.torch_tensor as torch_tensor
 
 
 def rand_u_like(example_tensor: model_tensor.ParameterTensor) -> model_tensor.ParameterTensor:
