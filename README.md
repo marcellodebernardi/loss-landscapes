@@ -95,17 +95,20 @@ landscape = random_plane(agent, evaluator, normalize='filter')
 
 
 
-## 5. WIP: Trajectory Tracking, Connecting Paths, and Saddle Points
+## 5. WIPÖ Connecting Paths, Saddle Points, and Trajectory Tracking
 A number of features are currently under development, but as of yet incomplete.
 
-1. The library will enable trajectory tracking in a simple, model-agnostic fashion. A `TrajectoryTracker` object
-stores a model parameter history, which the user can update by passing the model to the tracker, which extracts
-the model's current state and appends it to the trajectory history.
-2. A number of papers in recent years have shown that loss landscapes of neural networks are dominated by a
+A number of papers in recent years have shown that loss landscapes of neural networks are dominated by a
 proliferation of saddle points, that good solutions are better described as large low-loss plateaus than as
 "well-bottom" points, and that for sufficiently high-dimensional networks, a low-loss path in parameter space can
-be found between almost any arbitrary pair of minima. In the future, the `loss-landscapes` library will feature implementations of algorithms for finding such low-loss
-connecting paths in the loss landscape, as well as tools to facilitate the study of saddle points.
+be found between almost any arbitrary pair of minima. In the future, the `loss-landscapes` library will feature 
+implementations of algorithms for finding such low-loss connecting paths in the loss landscape, as well as tools to
+facilitate the study of saddle points.
+
+Some sort of trajectory tracking features are also under consideration, though at the time it's unclear what this
+should actually mean, as the optimization trajectory is implicitly tracked by the user's training loop. Any metric
+along the optimization trajectory can be tracked with libraries such as [ignite](https://github.com/pytorch/ignite)
+for PyTorch.
 
 
 ## 7. Support for Other DL Libraries
