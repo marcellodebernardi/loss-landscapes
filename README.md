@@ -95,7 +95,7 @@ landscape = random_plane(agent, evaluator, normalize='filter')
 
 
 
-## 5. WIPÖ Connecting Paths, Saddle Points, and Trajectory Tracking
+## 5. WIP: Connecting Paths, Saddle Points, and Trajectory Tracking
 A number of features are currently under development, but as of yet incomplete.
 
 A number of papers in recent years have shown that loss landscapes of neural networks are dominated by a
