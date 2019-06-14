@@ -3,18 +3,13 @@ Defines functions for getting and setting the parameters of a model.
 """
 
 import copy
+import itertools
 import loss_landscapes.model_interface.model_wrapper as model_wrapper
 import loss_landscapes.model_interface.torch.torch_tensor as torch_tensor
 
 
 class TorchModelWrapper(model_wrapper.ModelWrapper):
     def __init__(self, model, components=None, layers=None, call_fn=None):
-        """
-        Construct a model wrapper which only exposes and operates on the underlying
-        model's parameters (torch.nn.Module.parameters()).
-
-        :param model: model to wrap
-        """
         super().__init__(model, components, layers, call_fn)
         # if user leaves components=None, we assume the entire model is the only component
         self.components = [model] if self.components is None else self.components
@@ -32,7 +27,7 @@ class TorchModelWrapper(model_wrapper.ModelWrapper):
         else:
             return self.model(x)
 
-    def get_parameters(self, deepcopy=False) -> 'torch_tensor.TorchParameterTensor':
+    def get_parameter_tensor(self, deepcopy=False) -> 'torch_tensor.TorchParameterTensor':
         """
         Return a TorchParameterTensor wrapping the named parameters of the underlying model.
         The parameters can either be returned as a view of the model parameters or as a copy.
@@ -51,7 +46,7 @@ class TorchModelWrapper(model_wrapper.ModelWrapper):
 
         return torch_tensor.TorchParameterTensor(parameters)
 
-    def set_parameters(self, new_parameters: torch_tensor.TorchParameterTensor):
+    def set_parameter_tensor(self, new_parameters: torch_tensor.TorchParameterTensor):
         """
         Sets the parameters of the wrapped model to the given ParameterVector.
         :param new_parameters: ParameterVector of new parameters
@@ -65,3 +60,17 @@ class TorchModelWrapper(model_wrapper.ModelWrapper):
                     new_state_dict[param_name] = new_parameters[j]
             # load new state dictionary
             module.load_state_dict(new_state_dict)
+
+    def parameters(self):
+        raise NotImplementedError('Only named parameters are exposed.')
+
+    def named_parameters(self):
+        return itertools.chain(p
+                               for c in self.components
+                               for _, p in c.named_parameters()
+                               if self.layers is None or p in self.layers
+                               )
+
+    def zero_grad(self):
+        for component in self.components:
+            component.zero_grad()

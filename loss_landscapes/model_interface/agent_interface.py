@@ -1,6 +1,6 @@
 import inspect
 import loss_landscapes.model_interface.model_wrapper as model_wrapper
-import loss_landscapes.model_interface.torch.torch_wrappers as torch_wrappers
+import loss_landscapes.model_interface.torch.torch_wrapper as torch_wrappers
 
 
 SUPPORTED_LIBRARIES = {

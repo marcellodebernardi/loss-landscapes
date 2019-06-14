@@ -55,13 +55,13 @@ class _BezierCurve(_ParametricCurve):
 
         # add intermediate control points
         if order > 1:
-            start_parameters = self.model_start_wrapper.get_parameters()
-            end_parameters = self.model_end_wrapper.get_parameters()
+            start_parameters = self.model_start_wrapper.get_parameter_tensor()
+            end_parameters = self.model_end_wrapper.get_parameter_tensor()
             direction = (end_parameters - start_parameters) / order
 
             for i in range(1, order):
                 model_template_wrapper = copy.deepcopy(self.model_start_wrapper)
-                model_template_wrapper.set_parameters(start_parameters + (direction * i))
+                model_template_wrapper.set_parameter_tensor(start_parameters + (direction * i))
                 self.control_points.append(model_template_wrapper)
 
     def fit(self):
@@ -89,8 +89,8 @@ def garipov_curve_search(model_a, model_b, curve_type='polygon_chain') -> np.nda
     model_a_wrapper = wrap_model(model_a)
     model_b_wrapper = wrap_model(model_b)
 
-    point_a = model_a_wrapper.get_parameters()
-    point_b = model_b_wrapper.get_parameters()
+    point_a = model_a_wrapper.get_parameter_tensor()
+    point_b = model_b_wrapper.get_parameter_tensor()
 
     # todo
     if curve_type == 'polygon_chain':

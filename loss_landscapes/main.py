@@ -6,11 +6,11 @@ import copy
 import numpy as np
 from loss_landscapes.model_interface.agent_interface import AgentInterface, wrap_model
 from loss_landscapes.model_interface.tensor_factory import rand_u_like
-from loss_landscapes.model_metrics.metrics import Metric
+from loss_landscapes.model_metrics.metric import Metric
 
 
 # noinspection DuplicatedCode
-def point(model, evaluator: Metric, agent_interface: AgentInterface = None) -> tuple:
+def point(model, metric: Metric, agent_interface: AgentInterface = None) -> tuple:
     """
     Returns the computed value of the evaluation function applied to the model
     or agent at a specific point in parameter space.
@@ -24,15 +24,15 @@ def point(model, evaluator: Metric, agent_interface: AgentInterface = None) -> t
     agent with an arbitrary interface and structure.
 
     :param model: the model defining the point in parameter space
-    :param evaluator: list of function of form evaluation_f(model), used to evaluate model loss
+    :param metric: list of function of form evaluation_f(model), used to evaluate model loss
     :param agent_interface: defines how to access components etc for complex agents
     :return: quantity specified by evaluation_f at point in parameter space
     """
-    return evaluator(wrap_model(model, agent_interface))
+    return metric(wrap_model(model, agent_interface))
 
 
 # noinspection DuplicatedCode
-def linear_interpolation(model_start, model_end, evaluator: Metric, agent_interface: AgentInterface = None,
+def linear_interpolation(model_start, model_end, metric: Metric, agent_interface: AgentInterface = None,
                          steps=100, deepcopy_model=False) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model or
@@ -63,7 +63,7 @@ def linear_interpolation(model_start, model_end, evaluator: Metric, agent_interf
 
     :param model_start: the model defining the start point of the line in parameter space
     :param model_end: the model defining the end point of the line in parameter space
-    :param evaluator: list of function of form evaluation_f(model), used to evaluate model loss
+    :param metric: list of function of form evaluation_f(model), used to evaluate model loss
     :param agent_interface: defines how to access components etc for complex agents
     :param steps: at how many steps from start to end the model is evaluated
     :param deepcopy_model: indicates whether the method will deepcopy the model(s) to avoid aliasing
@@ -73,21 +73,21 @@ def linear_interpolation(model_start, model_end, evaluator: Metric, agent_interf
     model_start_wrapper = wrap_model(copy.deepcopy(model_start) if deepcopy_model else model_start, agent_interface)
     end_model_wrapper = wrap_model(copy.deepcopy(model_end) if deepcopy_model else model_end, agent_interface)
 
-    start_point = model_start_wrapper.get_parameters()
-    end_point = end_model_wrapper.get_parameters()
+    start_point = model_start_wrapper.get_parameter_tensor()
+    end_point = end_model_wrapper.get_parameter_tensor()
     direction = (end_point - start_point) / steps
 
     data_values = []
     for i in range(steps):
         # add a step along the line to the model parameters, then evaluate
         start_point.add_(direction)
-        data_values.append(evaluator(model_start_wrapper))
+        data_values.append(metric(model_start_wrapper))
 
     return np.array(data_values)
 
 
 # noinspection DuplicatedCode
-def random_line(model_start, evaluator: Metric, agent_interface: AgentInterface = None, distance=0.1, steps=100,
+def random_line(model_start, metric: Metric, agent_interface: AgentInterface = None, distance=0.1, steps=100,
                 normalization='filter', deepcopy_model=False) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model or agent along a
@@ -121,7 +121,7 @@ def random_line(model_start, evaluator: Metric, agent_interface: AgentInterface 
     agent with an arbitrary interface and structure.
 
     :param model_start: model to be evaluated, whose current parameters represent the start point
-    :param evaluator: function of form evaluation_f(model), used to evaluate model loss
+    :param metric: function of form evaluation_f(model), used to evaluate model loss
     :param agent_interface: defines how to access components etc for complex agents
     :param distance: maximum distance in parameter space from the start point
     :param steps: at how many steps from start to end the model is evaluated
@@ -134,7 +134,7 @@ def random_line(model_start, evaluator: Metric, agent_interface: AgentInterface 
 
     # obtain start point in parameter space and random direction
     # random direction is randomly sampled, then normalized, and finally scaled by distance/steps
-    start_point = model_start_wrapper.get_parameters()
+    start_point = model_start_wrapper.get_parameter_tensor()
     direction = rand_u_like(start_point)
 
     if normalization == 'model':
@@ -154,13 +154,13 @@ def random_line(model_start, evaluator: Metric, agent_interface: AgentInterface 
     for i in range(steps):
         # add a step along the line to the model parameters, then evaluate
         start_point.add_(direction)
-        data_values.append(evaluator(model_start_wrapper))
+        data_values.append(metric(model_start_wrapper))
 
     return np.array(data_values)
 
 
 # noinspection DuplicatedCode
-def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: Metric,
+def planar_interpolation(model_start, model_end_one, model_end_two, metric: Metric,
                          agent_interface: AgentInterface = None, steps=20, deepcopy_model=False) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model or agent along
@@ -195,7 +195,7 @@ def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: M
     :param model_start: the model defining the origin point of the plane in parameter space
     :param model_end_one: the model representing the end point of the first direction defining the plane
     :param model_end_two: the model representing the end point of the second direction defining the plane
-    :param evaluator: function of form evaluation_f(model), used to evaluate model loss
+    :param metric: function of form evaluation_f(model), used to evaluate model loss
     :param agent_interface: defines how to access components etc for complex agents
     :param steps: at how many steps from start to end the model is evaluated
     :param deepcopy_model: indicates whether the method will deepcopy the model(s) to avoid aliasing
@@ -206,9 +206,9 @@ def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: M
     model_end_two_wrapper = wrap_model(copy.deepcopy(model_end_two) if deepcopy_model else model_end_two, agent_interface)
 
     # compute direction vectors
-    start_point = model_start_wrapper.get_parameters()
-    dir_one = (model_end_one_wrapper.get_parameters() - start_point) / steps
-    dir_two = (model_end_two_wrapper.get_parameters() - start_point) / steps
+    start_point = model_start_wrapper.get_parameter_tensor()
+    dir_one = (model_end_one_wrapper.get_parameter_tensor() - start_point) / steps
+    dir_two = (model_end_two_wrapper.get_parameter_tensor() - start_point) / steps
 
     data_matrix = []
     # evaluate loss in grid of (steps * steps) points, where each column signifies one step
@@ -223,10 +223,10 @@ def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: M
             # so you can easily use in-place operations to move along dir_two
             if i % 2 == 0:
                 start_point.add_(dir_two)
-                data_column.append(evaluator(model_start_wrapper))
+                data_column.append(metric(model_start_wrapper))
             else:
                 start_point.sub_(dir_two)
-                data_column.insert(0, evaluator(model_start_wrapper))
+                data_column.insert(0, metric(model_start_wrapper))
 
         data_matrix.append(data_column)
         start_point.add_(dir_one)
@@ -235,7 +235,7 @@ def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: M
 
 
 # noinspection DuplicatedCode
-def random_plane(model, evaluator: Metric, agent_interface: AgentInterface = None, distance=1, steps=20,
+def random_plane(model, metric: Metric, agent_interface: AgentInterface = None, distance=1, steps=20,
                  normalization='filter', deepcopy_model=False) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model or agent along a planar
@@ -270,7 +270,7 @@ def random_plane(model, evaluator: Metric, agent_interface: AgentInterface = Non
     agent with an arbitrary interface and structure.
 
     :param model: the model defining the origin point of the plane in parameter space
-    :param evaluator: function of form evaluation_f(model), used to evaluate model loss
+    :param metric: function of form evaluation_f(model), used to evaluate model loss
     :param agent_interface: defines how to access components etc for complex agents
     :param distance: maximum distance in parameter space from the start point
     :param steps: at how many steps from start to end the model is evaluated
@@ -280,7 +280,7 @@ def random_plane(model, evaluator: Metric, agent_interface: AgentInterface = Non
     """
     model_start_wrapper = wrap_model(copy.deepcopy(model) if deepcopy_model else model, agent_interface)
 
-    start_point = model_start_wrapper.get_parameters()
+    start_point = model_start_wrapper.get_parameter_tensor()
     dir_one = rand_u_like(start_point)
     dir_two = rand_u_like(start_point)
 
@@ -321,10 +321,10 @@ def random_plane(model, evaluator: Metric, agent_interface: AgentInterface = Non
             # so you can easily use in-place operations to move along dir_two
             if i % 2 == 0:
                 start_point.add_(dir_two)
-                data_column.append(evaluator(model_start_wrapper))
+                data_column.append(metric(model_start_wrapper))
             else:
                 start_point.sub_(dir_two)
-                data_column.insert(0, evaluator(model_start_wrapper))
+                data_column.insert(0, metric(model_start_wrapper))
 
         data_matrix.append(data_column)
         start_point.add_(dir_one)

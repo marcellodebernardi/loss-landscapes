@@ -76,7 +76,7 @@ class FullTrajectoryTracker(TrajectoryTracker):
         return self.__getitem__(timestep)
 
     def save_position(self, model):
-        np.save(self.dir + str(self.next_idx) + '.npy', wrap_model(model, self.agent_interface).get_parameters(deepcopy=True).as_numpy())
+        np.save(self.dir + str(self.next_idx) + '.npy', wrap_model(model, self.agent_interface).get_parameter_tensor(deepcopy=True).as_numpy())
         self.next_idx += 1
 
     def get_trajectory(self) -> list:
@@ -101,7 +101,7 @@ class ProjectingTrajectoryTracker(TrajectoryTracker):
         self.trajectory = []
         self.agent_interface = agent_interface
 
-        n = wrap_model(model, agent_interface).get_parameters().numel()
+        n = wrap_model(model, agent_interface).get_parameter_tensor().numel()
         self.A = np.column_stack(
             [np.random.normal(size=n) for _ in range(n_bases)]
         )
@@ -117,5 +117,5 @@ class ProjectingTrajectoryTracker(TrajectoryTracker):
 
     def save_position(self, model):
         # we solve the equation Ax = b using least squares, where A is the matrix of basis vectors
-        b = wrap_model(model, self.agent_interface).get_parameters().as_numpy()
+        b = wrap_model(model, self.agent_interface).get_parameter_tensor().as_numpy()
         self.trajectory.append(np.linalg.lstsq(self.A, b, rcond=None)[0])
