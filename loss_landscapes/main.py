@@ -330,3 +330,6 @@ def random_plane(model, evaluator: Evaluator, agent_interface: AgentInterface = 
         start_point.add_(dir_one)
 
     return np.array(data_matrix)
+
+
+# todo add hypersphere function
