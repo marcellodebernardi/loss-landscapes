@@ -1,42 +1,31 @@
-from abc import ABC, abstractmethod
 import torch
 import torch.autograd
-from loss_landscapes.model_metrics.metrics import Metric
+from loss_landscapes.model_metrics.metric import Metric
 
 
-class TorchReinforcementMetric(Metric, ABC):
-    @abstractmethod
+class ExpectedReturnEvaluator(Metric):
     def __init__(self, gym_environment, n_episodes):
         super().__init__()
-        self.env = gym_environment
+        self.gym_environment = gym_environment
         self.n_episodes = n_episodes
-
-    @abstractmethod
-    def __call__(self, agent):
-        pass
-
-
-class ExpectedReturnEvaluator(TorchReinforcementMetric):
-    def __init__(self, gym_environment, n_episodes):
-        super().__init__(gym_environment, n_episodes)
 
     def __call__(self, agent):
         returns = []
 
+        # compute total return for each episode
         for episode in range(self.n_episodes):
-            cum_reward = 0
-
+            episode_return = 0
             obs, reward, done, _ = self.env.step(
                 agent(torch.from_numpy(self.env.reset()).float())
             )
-            cum_reward += reward
+            episode_return += reward
 
             while not done:
                 obs, reward, done, info = self.env.step(
                     agent(torch.from_numpy(obs).float())
                 )
-                cum_reward += reward
+                episode_return += reward
+            returns.append(episode_return)
 
-            returns.append(cum_reward)
-
+        # return average of episode returns
         return sum(returns) / len(returns)
