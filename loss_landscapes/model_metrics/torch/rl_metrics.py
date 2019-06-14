@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 import torch
 import torch.autograd
-from loss_landscapes.evaluators.evaluators import Evaluator
+from loss_landscapes.model_metrics.metrics import Metric
 
 
-class TorchReinforcementEvaluator(Evaluator, ABC):
+class TorchReinforcementMetric(Metric, ABC):
     @abstractmethod
     def __init__(self, gym_environment, n_episodes):
         super().__init__()
@@ -16,7 +16,7 @@ class TorchReinforcementEvaluator(Evaluator, ABC):
         pass
 
 
-class ExpectedReturnEvaluator(TorchReinforcementEvaluator):
+class ExpectedReturnEvaluator(TorchReinforcementMetric):
     def __init__(self, gym_environment, n_episodes):
         super().__init__(gym_environment, n_episodes)
 

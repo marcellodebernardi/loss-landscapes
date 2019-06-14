@@ -6,11 +6,11 @@ import copy
 import numpy as np
 from loss_landscapes.model_interface.agent_interface import AgentInterface, wrap_model
 from loss_landscapes.model_interface.tensor_factory import rand_u_like
-from loss_landscapes.evaluators.evaluators import Evaluator
+from loss_landscapes.model_metrics.metrics import Metric
 
 
 # noinspection DuplicatedCode
-def point(model, evaluator: Evaluator, agent_interface: AgentInterface = None) -> tuple:
+def point(model, evaluator: Metric, agent_interface: AgentInterface = None) -> tuple:
     """
     Returns the computed value of the evaluation function applied to the model
     or agent at a specific point in parameter space.
@@ -32,7 +32,7 @@ def point(model, evaluator: Evaluator, agent_interface: AgentInterface = None) -
 
 
 # noinspection DuplicatedCode
-def linear_interpolation(model_start, model_end, evaluator: Evaluator, agent_interface: AgentInterface = None,
+def linear_interpolation(model_start, model_end, evaluator: Metric, agent_interface: AgentInterface = None,
                          steps=100, deepcopy_model=False) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model or
@@ -87,7 +87,7 @@ def linear_interpolation(model_start, model_end, evaluator: Evaluator, agent_int
 
 
 # noinspection DuplicatedCode
-def random_line(model_start, evaluator: Evaluator, agent_interface: AgentInterface = None, distance=0.1, steps=100,
+def random_line(model_start, evaluator: Metric, agent_interface: AgentInterface = None, distance=0.1, steps=100,
                 normalization='filter', deepcopy_model=False) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model or agent along a
@@ -160,7 +160,7 @@ def random_line(model_start, evaluator: Evaluator, agent_interface: AgentInterfa
 
 
 # noinspection DuplicatedCode
-def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: Evaluator,
+def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: Metric,
                          agent_interface: AgentInterface = None, steps=20, deepcopy_model=False) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model or agent along
@@ -235,7 +235,7 @@ def planar_interpolation(model_start, model_end_one, model_end_two, evaluator: E
 
 
 # noinspection DuplicatedCode
-def random_plane(model, evaluator: Evaluator, agent_interface: AgentInterface = None, distance=1, steps=20,
+def random_plane(model, evaluator: Metric, agent_interface: AgentInterface = None, distance=1, steps=20,
                  normalization='filter', deepcopy_model=False) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model or agent along a planar

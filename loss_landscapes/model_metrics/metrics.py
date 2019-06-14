@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 
-class Evaluator(ABC):
+class Metric(ABC):
     def __init__(self):
         super().__init__()
 
@@ -10,7 +10,7 @@ class Evaluator(ABC):
         pass
 
 
-class EvaluatorPipeline(Evaluator, ABC):
+class MetricPipeline(Metric, ABC):
     def __init__(self, evaluators: list):
         super().__init__()
         self.evaluators = evaluators

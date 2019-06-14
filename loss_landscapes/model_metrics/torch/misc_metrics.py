@@ -1,5 +1,5 @@
 """
-A library of pre-written evaluators for more general use cases than loss functions.
+A library of pre-written metric evaluators for more general use cases than loss functions.
 
 The evaluators in this module are not specific to the landscape of the training loss, and
 can be useful in other situations; for example, a ClassAccuracyEvaluator can be used to
@@ -8,10 +8,10 @@ inspect the classification accuracy of a model under different parameter value a
 
 from abc import ABC, abstractmethod
 import torch.nn
-from loss_landscapes.evaluators.evaluators import Evaluator
+from loss_landscapes.model_metrics.metrics import Metric
 
 
-class TorchMetricEvaluator(Evaluator, ABC):
+class TorchMetric(Metric, ABC):
     def __init__(self):
         super().__init__()
 
@@ -20,7 +20,7 @@ class TorchMetricEvaluator(Evaluator, ABC):
         pass
 
 
-class ClassificationAccuracyEvaluator(TorchMetricEvaluator):
+class ClassificationAccuracyEvaluator(TorchMetric):
     """ Computes the model's classification accuracy over a specified set of inputs-labels pairs. """
     def __init__(self, inputs, labels):
         super().__init__()
