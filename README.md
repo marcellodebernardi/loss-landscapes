@@ -63,6 +63,17 @@ Furthermore, the user can add custom metrics by subclassing `Metric`. As an exam
 implementation of `Loss`, for `torch` models:
 
 ````python
+class Metric(abc.ABC):
+    """ A quantity that can be computed given a model or an agent. """
+
+    def __init__(self):
+        super().__init__()
+
+    @abc.abstractmethod
+    def __call__(self, model_wrapper: ModelWrapper):
+        pass
+
+
 class Loss(Metric):
     """ Computes a specified loss function over specified input-output pairs. """
     def __init__(self, loss_fn, inputs: torch.Tensor, target: torch.Tensor):
@@ -74,6 +85,15 @@ class Loss(Metric):
     def __call__(self, model_wrapper: TorchModelWrapper) -> np.ndarray:
         return self.loss_fn(model_wrapper(self.inputs), self.target).clone().detach().numpy()
 ````
+
+The user may create custom `Metric`s in a similar manner. One complication is that the `Metric` class' 
+`__call__` method is designed to take as input a `ModelWrapper` rather than a model. This class is internal
+to the library and exists to facilitate the handling of the myriad of different models a user may pass as
+inputs to a function such as `loss_landscapes.planar_interpolation()`. It is sufficient for the user to know
+that a `ModelWrapper` is a callable object that can be used to call the model on a given input (see the `call_fn`
+argument of the `ModelInterface` class in the next section). The class also provides a `get_model()` method
+that exposes a reference to the underlying model, should the user wish to carry out more complicated operations
+on it.
 
 In summary, the `Metric` abstraction adds a great degree of flexibility. An metric defines what quantity
 dependent on model parameters the user is interested in evaluating, and how to evaluate it. The user could define, 
@@ -92,6 +112,9 @@ library how to interface with the model (or the agent, on a more general level).
 `ModelInterface` object. In the example below, the `ModelInterface` specifies the means by which the `random_plane`
 method will interface with a particular reinforcement learning agent, such that the agent object contains neural
 network models.
+
+In the example below, a RL agent with a policy network and a value function network is being evaluated on some
+metric.
 
 ````python
 # agent.policy and agent.value_function are pytorch modules
