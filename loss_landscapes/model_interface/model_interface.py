@@ -11,7 +11,7 @@ SUPPORTED_MODEL_TYPES = {
 }
 
 
-class AgentInterface:
+class ModelInterface:
     """ Defines how to operate on an agent object that isn't just a neural network. """
     def __init__(self, library: str, components: list = None, layers: list = None, call_fn: callable = None):
         """
