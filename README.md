@@ -8,6 +8,9 @@ easier, aiding the analysis of the geometry of neural network loss landscapes.
 Currently, `loss-landscapes` only supports PyTorch models, but support for other DL libraries (TensorFlow in particular)
 is planned for future releases.
 
+**NOTE: this library is in early development. Bugs are virtually a certainty, and the API is volatile. Do not use
+this library in production code. For prototyping and research, always use the newest version of the library.**
+
 
 ## 1. What is a Loss Landscape?
 Let `L : Parameters -> Real Numbers` be a loss function, which maps a point in the model parameter space to a 
@@ -34,8 +37,8 @@ and is designed to support any deep learning library (in principle - currently o
 example, it allows a PyTorch user to produce data for a plot such as the one seen above by simply calling
 
 ````python
-evaluator = LossEvaluator(loss_function, X, y)
-landscape = random_plane(model, evaluator, normalize='filter')
+metric = Loss(loss_function, X, y)
+landscape = random_plane(model, metric, normalize='filter')
 ````
 
 This would return a 2-dimensional array of loss values, which the user can plot in any desirable way. 
@@ -48,30 +51,33 @@ Check the `examples` directory for `jupyter` notebooks with more in-depth exampl
 <p align="center"><img src="/img/loss-contour-3d.png" width="75%" align="middle"/></p>
 
 
-## 3. Evaluators and Custom Evaluators
+## 3. Metrics and Custom Metrics
 The `loss-landscapes` library can compute any quantity of interest at a collection of points in a parameter subspace,
-not just loss. This is accomplished using an `Evaluator`: a callable object which applies a pre-determined function,
-such as a cross entropy loss with a specific set of inputs and outputs, at every point. The `loss_landscapes.evaluators`
-package contains a number of evaluators that cover common use cases, such as `LossEvaluator` (evaluates a loss
-function), `GradientEvaluator` (evaluates the gradient of the loss w.r.t. the model parameters), 
+not just loss. This is accomplished using a `Metric`: a callable object which applies a pre-determined function,
+such as a cross entropy loss with a specific set of inputs and outputs, to the model. The `loss_landscapes.model_metrics`
+package contains a number of metrics that cover common use cases, such as `Loss` (evaluates a loss
+function), `LossGradient` (evaluates the gradient of the loss w.r.t. the model parameters), 
 `PrincipalCurvatureEvaluator` (evaluates the principal curvatures of the loss function), and more.
 
-Furthermore, the user can add custom evaluators by subclassing `Evaluator`. As an example, consider the library
-implementation of `LossEvaluator`, for `torch` models:
+Furthermore, the user can add custom metrics by subclassing `Metric`. As an example, consider the library
+implementation of `Loss`, for `torch` models:
 
 ````python
-class LossEvaluator(SupervisedTorchEvaluator):
+class Loss(Metric):
     """ Computes a specified loss function over specified input-output pairs. """
-    def __init__(self, supervised_loss_fn, inputs, target):
-        super().__init__(supervised_loss_fn, inputs, target)
+    def __init__(self, loss_fn, inputs: torch.Tensor, target: torch.Tensor):
+        super().__init__()
+        self.loss_fn = loss_fn
+        self.inputs = inputs
+        self.target = target
 
-    def __call__(self, model) -> np.ndarray:
-        return self.loss_fn(model(self.inputs), self.target).clone().detach().numpy()
+    def __call__(self, model_wrapper: TorchModelWrapper) -> np.ndarray:
+        return self.loss_fn(model_wrapper(self.inputs), self.target).clone().detach().numpy()
 ````
 
-In summary, the `Evaluator` abstraction adds a great degree of flexibility. An evaluator defines what quantity
-dependent on model parameters the user is interested in evaluating , and how to evaluate it. The user could define, 
-for example, an evaluator that computes an estimate of the expected return of a reinforcement learning agent.
+In summary, the `Metric` abstraction adds a great degree of flexibility. An metric defines what quantity
+dependent on model parameters the user is interested in evaluating, and how to evaluate it. The user could define, 
+for example, a metric that computes an estimate of the expected return of a reinforcement learning agent.
 
 
 ## 4. RL Agents and Other Complications
@@ -90,7 +96,7 @@ network models.
 ````python
 # agent.policy and agent.value_function are pytorch modules
 interface = AgentInterface(library='torch', components=[agent.policy, agent.value_function], call_fn= lambda x: model.policy(x))
-landscape = random_plane(agent, evaluator, normalize='filter')
+landscape = random_plane(agent, metric, interface, normalize='filter')
 ````
 
 
@@ -120,6 +126,6 @@ The package is available on PyPI. Install using `pip install loss-landscapes`. T
 
 ````python
 import loss_landscapes
-import loss_landscapes.evaluators  # for the base Evaluator class
-import loss_landscapes.evaluators.torch  # for the pre-defined PyTorch evaluators
+import loss_landscapes.model_metrics        # for the base Metric class
+import loss_landscapes.model_metrics.torch  # for the pre-defined PyTorch metrics, split into sl_metrics and rl_metrics
 ````
