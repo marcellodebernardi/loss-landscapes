@@ -89,13 +89,13 @@ user and in most cases can safely be ignored.
 For more complex cases, such as when the user wants to evaluate the loss landscape as a function of a subset of
 the model parameters, or the expected return landscape for a RL model, the user must specify to the `loss-landscapes`
 library how to interface with the model (or the agent, on a more general level). This is accomplished using a
-`AgentInterface` object. In the example below, the `AgentInterface` specifies the means by which the `random_plane`
+`ModelInterface` object. In the example below, the `ModelInterface` specifies the means by which the `random_plane`
 method will interface with a particular reinforcement learning agent, such that the agent object contains neural
 network models.
 
 ````python
 # agent.policy and agent.value_function are pytorch modules
-interface = AgentInterface(library='torch', components=[agent.policy, agent.value_function], call_fn= lambda x: model.policy(x))
+interface = ModelInterface(library='torch', components=[agent.policy, agent.value_function], call_fn= lambda x: model.policy(x))
 landscape = random_plane(agent, metric, interface, normalize='filter')
 ````
 
