@@ -1,6 +1,6 @@
 import torch
 import torch.autograd
-from loss_landscapes.model_metrics.metric import Metric
+from loss_landscapes.metrics.metric import Metric
 
 
 class ExpectedReturnMetric(Metric):
