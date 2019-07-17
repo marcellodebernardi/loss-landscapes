@@ -15,13 +15,12 @@ class Metric(ABC):
         pass
 
 
-class MetricPipeline(Metric, ABC):
+class MetricPipeline(Metric):
     """ A sequence of metrics to be computed in order, given a model or an agent. """
 
     def __init__(self, metrics: list):
         super().__init__()
-        self.evaluators = metrics
+        self.metrics = metrics
 
-    @abstractmethod
     def __call__(self, model_wrapper: ModelWrapper) -> tuple:
-        pass
+        return tuple([metric(model_wrapper) for metric in self.metrics])
