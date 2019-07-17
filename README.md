@@ -159,5 +159,5 @@ The package is available on PyPI. Install using `pip install loss-landscapes`. T
 
 ````python
 import loss_landscapes
-import loss_landscapes.model_metrics
+import loss_landscapes.metrics
 ````

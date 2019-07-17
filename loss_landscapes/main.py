@@ -8,7 +8,7 @@ import torch.nn
 import numpy as np
 from loss_landscapes.model_interface.model_wrapper import ModelWrapper, wrap_model
 from loss_landscapes.model_interface.model_parameters import rand_u_like
-from loss_landscapes.model_metrics.metric import Metric
+from loss_landscapes.metrics.metric import Metric
 
 
 # noinspection DuplicatedCode

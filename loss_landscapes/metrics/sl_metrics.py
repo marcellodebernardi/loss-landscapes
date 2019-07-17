@@ -10,7 +10,7 @@ computing the loss, the gradient of the loss (w.r.t. model parameters) and Hessi
 import numpy as np
 import torch
 import torch.autograd
-from loss_landscapes.model_metrics.metric import Metric
+from loss_landscapes.metrics.metric import Metric
 from loss_landscapes.model_interface.model_parameters import rand_u_like
 from loss_landscapes.model_interface.model_wrapper import ModelWrapper
 
