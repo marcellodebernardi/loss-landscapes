@@ -74,8 +74,8 @@ def linear_interpolation(model_start: typing.Union[torch.nn.Module, ModelWrapper
     model_start_wrapper = wrap_model(copy.deepcopy(model_start) if deepcopy_model else model_start)
     end_model_wrapper = wrap_model(copy.deepcopy(model_end) if deepcopy_model else model_end)
 
-    start_point = model_start_wrapper.get_parameter_tensor()
-    end_point = end_model_wrapper.get_parameter_tensor()
+    start_point = model_start_wrapper.get_module_parameters()
+    end_point = end_model_wrapper.get_module_parameters()
     direction = (end_point - start_point) / steps
 
     data_values = []
@@ -135,7 +135,7 @@ def random_line(model_start: typing.Union[torch.nn.Module, ModelWrapper], metric
 
     # obtain start point in parameter space and random direction
     # random direction is randomly sampled, then normalized, and finally scaled by distance/steps
-    start_point = model_start_wrapper.get_parameter_tensor()
+    start_point = model_start_wrapper.get_module_parameters()
     direction = rand_u_like(start_point)
 
     if normalization == 'model':
@@ -208,9 +208,9 @@ def planar_interpolation(model_start: typing.Union[torch.nn.Module, ModelWrapper
     model_end_two_wrapper = wrap_model(copy.deepcopy(model_end_two) if deepcopy_model else model_end_two)
 
     # compute direction vectors
-    start_point = model_start_wrapper.get_parameter_tensor()
-    dir_one = (model_end_one_wrapper.get_parameter_tensor() - start_point) / steps
-    dir_two = (model_end_two_wrapper.get_parameter_tensor() - start_point) / steps
+    start_point = model_start_wrapper.get_module_parameters()
+    dir_one = (model_end_one_wrapper.get_module_parameters() - start_point) / steps
+    dir_two = (model_end_two_wrapper.get_module_parameters() - start_point) / steps
 
     data_matrix = []
     # evaluate loss in grid of (steps * steps) points, where each column signifies one step
@@ -281,7 +281,7 @@ def random_plane(model: typing.Union[torch.nn.Module, ModelWrapper], metric: Met
     """
     model_start_wrapper = wrap_model(copy.deepcopy(model) if deepcopy_model else model)
 
-    start_point = model_start_wrapper.get_parameter_tensor()
+    start_point = model_start_wrapper.get_module_parameters()
     dir_one = rand_u_like(start_point)
     dir_two = rand_u_like(start_point)
 
