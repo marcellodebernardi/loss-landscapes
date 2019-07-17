@@ -11,8 +11,8 @@ import numpy as np
 import torch
 import torch.autograd
 from loss_landscapes.model_metrics.metric import Metric
-from loss_landscapes.model_interface.tensor_factory import rand_u_like
-from loss_landscapes.model_interface.torch.torch_wrapper import TorchModelWrapper
+from loss_landscapes.model_interface.model_parameters import rand_u_like
+from loss_landscapes.model_interface.model_wrapper import ModelWrapper
 
 
 class Loss(Metric):
@@ -23,8 +23,8 @@ class Loss(Metric):
         self.inputs = inputs
         self.target = target
 
-    def __call__(self, model_wrapper: TorchModelWrapper) -> np.ndarray:
-        return self.loss_fn(model_wrapper(self.inputs), self.target).clone().detach().numpy()
+    def __call__(self, model_wrapper: ModelWrapper) -> float:
+        return self.loss_fn(model_wrapper.forward(self.inputs), self.target).item()
 
 
 class LossGradient(Metric):
@@ -36,8 +36,8 @@ class LossGradient(Metric):
         self.inputs = inputs
         self.target = target
 
-    def __call__(self, model_wrapper: TorchModelWrapper) -> np.ndarray:
-        loss = self.loss_fn(model_wrapper(self.inputs), self.target)
+    def __call__(self, model_wrapper: ModelWrapper) -> np.ndarray:
+        loss = self.loss_fn(model_wrapper.forward(self.inputs), self.target)
         gradient = torch.autograd.grad(loss, model_wrapper.named_parameters()).detach().numpy()
         model_wrapper.zero_grad()
         return gradient
@@ -56,10 +56,10 @@ class LossPerturbations(Metric):
         self.n_directions = n_directions
         self.alpha = alpha
 
-    def __call__(self, model_wrapper: TorchModelWrapper) -> np.ndarray:
+    def __call__(self, model_wrapper: ModelWrapper) -> np.ndarray:
         # start point and directions
-        start_point = model_wrapper.get_parameter_tensor()
-        start_loss = self.loss_fn(model_wrapper(self.inputs), self.target).clone().detach().numpy()
+        start_point = model_wrapper.get_module_parameters()
+        start_loss = self.loss_fn(model_wrapper.forward(self.inputs), self.target).item()
 
         # compute start loss and perturbed losses
         results = []
@@ -67,7 +67,7 @@ class LossPerturbations(Metric):
             direction = rand_u_like(start_point)
             start_point.add_(direction)
 
-            loss = self.loss_fn(model_wrapper(self.inputs), self.target).clone().detach().numpy()
+            loss = self.loss_fn(model_wrapper.forward(self.inputs), self.target).item()
             results.append(loss - start_loss)
 
             start_point.sub_(direction)

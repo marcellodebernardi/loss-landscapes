@@ -3,14 +3,16 @@ Functions for approximating loss/return landscapes in one and two dimensions.
 """
 
 import copy
+import typing
+import torch.nn
 import numpy as np
-from loss_landscapes.model_interface.model_interface import ModelInterface, wrap_model
-from loss_landscapes.model_interface.tensor_factory import rand_u_like
+from loss_landscapes.model_interface.model_wrapper import ModelWrapper, wrap_model
+from loss_landscapes.model_interface.model_parameters import rand_u_like
 from loss_landscapes.model_metrics.metric import Metric
 
 
 # noinspection DuplicatedCode
-def point(model, metric: Metric, agent_interface: ModelInterface = None) -> tuple:
+def point(model: typing.Union[torch.nn.Module, ModelWrapper], metric: Metric) -> tuple:
     """
     Returns the computed value of the evaluation function applied to the model
     or agent at a specific point in parameter space.
@@ -25,15 +27,15 @@ def point(model, metric: Metric, agent_interface: ModelInterface = None) -> tupl
 
     :param model: the model defining the point in parameter space
     :param metric: list of function of form evaluation_f(model), used to evaluate model loss
-    :param agent_interface: defines how to access components etc for complex agents
     :return: quantity specified by evaluation_f at point in parameter space
     """
-    return metric(wrap_model(model, agent_interface))
+    return metric(wrap_model(model))
 
 
 # noinspection DuplicatedCode
-def linear_interpolation(model_start, model_end, metric: Metric, agent_interface: ModelInterface = None,
-                         steps=100, deepcopy_model=False) -> np.ndarray:
+def linear_interpolation(model_start: typing.Union[torch.nn.Module, ModelWrapper],
+                         model_end: typing.Union[torch.nn.Module, ModelWrapper],
+                         metric: Metric, steps=100, deepcopy_model=False) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model or
     agent along a linear subspace of the parameter space defined by two end points.
@@ -64,14 +66,13 @@ def linear_interpolation(model_start, model_end, metric: Metric, agent_interface
     :param model_start: the model defining the start point of the line in parameter space
     :param model_end: the model defining the end point of the line in parameter space
     :param metric: list of function of form evaluation_f(model), used to evaluate model loss
-    :param agent_interface: defines how to access components etc for complex agents
     :param steps: at how many steps from start to end the model is evaluated
     :param deepcopy_model: indicates whether the method will deepcopy the model(s) to avoid aliasing
     :return: 1-d array of loss values along the line connecting start and end models
     """
     # create wrappers from deep copies to avoid aliasing if desired
-    model_start_wrapper = wrap_model(copy.deepcopy(model_start) if deepcopy_model else model_start, agent_interface)
-    end_model_wrapper = wrap_model(copy.deepcopy(model_end) if deepcopy_model else model_end, agent_interface)
+    model_start_wrapper = wrap_model(copy.deepcopy(model_start) if deepcopy_model else model_start)
+    end_model_wrapper = wrap_model(copy.deepcopy(model_end) if deepcopy_model else model_end)
 
     start_point = model_start_wrapper.get_parameter_tensor()
     end_point = end_model_wrapper.get_parameter_tensor()
@@ -87,7 +88,7 @@ def linear_interpolation(model_start, model_end, metric: Metric, agent_interface
 
 
 # noinspection DuplicatedCode
-def random_line(model_start, metric: Metric, agent_interface: ModelInterface = None, distance=0.1, steps=100,
+def random_line(model_start: typing.Union[torch.nn.Module, ModelWrapper], metric: Metric, distance=0.1, steps=100,
                 normalization='filter', deepcopy_model=False) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model or agent along a
@@ -98,13 +99,13 @@ def random_line(model_start, metric: Metric, agent_interface: ModelInterface = N
     direction, from the start point up to the maximum distance from the start point.
 
     Note that the dimensionality of the model parameters has an impact on the expected
-    length of a uniformly sampled vector in parameter space. That is, the more parameters
-    a model has, the longer the distance in the random vector's direction should be,
+    length of a uniformly sampled other in parameter space. That is, the more parameters
+    a model has, the longer the distance in the random other's direction should be,
     in order to see meaningful change in individual parameters. Normalizing the
-    direction vector according to the model's current parameter values, which is supported
+    direction other according to the model's current parameter values, which is supported
     through the 'normalization' parameter, helps reduce the impact of the distance
     parameter. In future releases, the distance parameter will refer to the maximum change
-    in an individual parameter, rather than the length of the random direction vector.
+    in an individual parameter, rather than the length of the random direction other.
 
     Note also that a simple line approximation can produce misleading views
     of the loss landscape due to the scale invariance of neural networks. The sharpness or
@@ -125,12 +126,12 @@ def random_line(model_start, metric: Metric, agent_interface: ModelInterface = N
     :param agent_interface: defines how to access components etc for complex agents
     :param distance: maximum distance in parameter space from the start point
     :param steps: at how many steps from start to end the model is evaluated
-    :param normalization: normalization of direction vector, must be one of 'filter', 'layer', 'model'
+    :param normalization: normalization of direction other, must be one of 'filter', 'layer', 'model'
     :param deepcopy_model: indicates whether the method will deepcopy the model(s) to avoid aliasing
     :return: 1-d array of loss values along the randomly sampled direction
     """
     # create wrappers from deep copies to avoid aliasing if desired
-    model_start_wrapper = wrap_model(copy.deepcopy(model_start) if deepcopy_model else model_start, agent_interface)
+    model_start_wrapper = wrap_model(copy.deepcopy(model_start) if deepcopy_model else model_start)
 
     # obtain start point in parameter space and random direction
     # random direction is randomly sampled, then normalized, and finally scaled by distance/steps
@@ -160,8 +161,10 @@ def random_line(model_start, metric: Metric, agent_interface: ModelInterface = N
 
 
 # noinspection DuplicatedCode
-def planar_interpolation(model_start, model_end_one, model_end_two, metric: Metric,
-                         agent_interface: ModelInterface = None, steps=20, deepcopy_model=False) -> np.ndarray:
+def planar_interpolation(model_start: typing.Union[torch.nn.Module, ModelWrapper],
+                         model_end_one: typing.Union[torch.nn.Module, ModelWrapper],
+                         model_end_two: typing.Union[torch.nn.Module, ModelWrapper],
+                         metric: Metric, steps=20, deepcopy_model=False) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model or agent along
     a planar subspace of the parameter space defined by a start point and two end points.
@@ -196,14 +199,13 @@ def planar_interpolation(model_start, model_end_one, model_end_two, metric: Metr
     :param model_end_one: the model representing the end point of the first direction defining the plane
     :param model_end_two: the model representing the end point of the second direction defining the plane
     :param metric: function of form evaluation_f(model), used to evaluate model loss
-    :param agent_interface: defines how to access components etc for complex agents
     :param steps: at how many steps from start to end the model is evaluated
     :param deepcopy_model: indicates whether the method will deepcopy the model(s) to avoid aliasing
     :return: 1-d array of loss values along the line connecting start and end models
     """
-    model_start_wrapper = wrap_model(copy.deepcopy(model_start) if deepcopy_model else model_start, agent_interface)
-    model_end_one_wrapper = wrap_model(copy.deepcopy(model_end_one) if deepcopy_model else model_end_one, agent_interface)
-    model_end_two_wrapper = wrap_model(copy.deepcopy(model_end_two) if deepcopy_model else model_end_two, agent_interface)
+    model_start_wrapper = wrap_model(copy.deepcopy(model_start) if deepcopy_model else model_start)
+    model_end_one_wrapper = wrap_model(copy.deepcopy(model_end_one) if deepcopy_model else model_end_one)
+    model_end_two_wrapper = wrap_model(copy.deepcopy(model_end_two) if deepcopy_model else model_end_two)
 
     # compute direction vectors
     start_point = model_start_wrapper.get_parameter_tensor()
@@ -235,7 +237,7 @@ def planar_interpolation(model_start, model_end_one, model_end_two, metric: Metr
 
 
 # noinspection DuplicatedCode
-def random_plane(model, metric: Metric, agent_interface: ModelInterface = None, distance=1, steps=20,
+def random_plane(model: typing.Union[torch.nn.Module, ModelWrapper], metric: Metric, distance=1, steps=20,
                  normalization='filter', deepcopy_model=False) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model or agent along a planar
@@ -247,13 +249,13 @@ def random_plane(model, metric: Metric, agent_interface: ModelInterface = None, 
     distance in both directions.
 
     Note that the dimensionality of the model parameters has an impact on the expected
-    length of a uniformly sampled vector in parameter space. That is, the more parameters
-    a model has, the longer the distance in the random vector's direction should be,
+    length of a uniformly sampled other in parameter space. That is, the more parameters
+    a model has, the longer the distance in the random other's direction should be,
     in order to see meaningful change in individual parameters. Normalizing the
-    direction vector according to the model's current parameter values, which is supported
+    direction other according to the model's current parameter values, which is supported
     through the 'normalization' parameter, helps reduce the impact of the distance
     parameter. In future releases, the distance parameter will refer to the maximum change
-    in an individual parameter, rather than the length of the random direction vector.
+    in an individual parameter, rather than the length of the random direction other.
 
     Note also that a simple planar approximation with randomly sampled directions can produce
     misleading approximations of the loss landscape due to the scale invariance of neural
@@ -271,14 +273,13 @@ def random_plane(model, metric: Metric, agent_interface: ModelInterface = None, 
 
     :param model: the model defining the origin point of the plane in parameter space
     :param metric: function of form evaluation_f(model), used to evaluate model loss
-    :param agent_interface: defines how to access components etc for complex agents
     :param distance: maximum distance in parameter space from the start point
     :param steps: at how many steps from start to end the model is evaluated
     :param normalization: normalization of direction vectors, must be one of 'filter', 'layer', 'model'
     :param deepcopy_model: indicates whether the method will deepcopy the model(s) to avoid aliasing
     :return: 1-d array of loss values along the line connecting start and end models
     """
-    model_start_wrapper = wrap_model(copy.deepcopy(model) if deepcopy_model else model, agent_interface)
+    model_start_wrapper = wrap_model(copy.deepcopy(model) if deepcopy_model else model)
 
     start_point = model_start_wrapper.get_parameter_tensor()
     dir_one = rand_u_like(start_point)

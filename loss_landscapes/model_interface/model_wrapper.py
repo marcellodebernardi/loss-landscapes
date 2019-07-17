@@ -1,46 +1,76 @@
+""" Class used to define interface to complex models """
+
 import abc
-import loss_landscapes.model_interface.model_tensor as model_tensor
+import itertools
+import torch.nn
+from loss_landscapes.model_interface.model_parameters import ModelParameters
 
 
 class ModelWrapper(abc.ABC):
-    def __init__(self, model, components, layers, call_fn):
-        self.model = model                    # wrapped model
-        self.components = components          # how to get state
-        self.layers = layers                  # layers to include
-        self.forward_fn = call_fn             # how to use model in evaluation
+    def __init__(self, modules: list):
+        self.modules = modules
 
-    def get_model(self):
-        """
-        Return a reference to the model encapsulated in this wrapper.
-        :return: wrapped model
-        """
-        return self.model
+    def get_modules(self) -> list:
+        return self.modules
+
+    def get_module_parameters(self) -> ModelParameters:
+        return ModelParameters([p for module in self.modules for p in module.parameters()])
+
+    def train(self, mode=True) -> 'ModelWrapper':
+        for module in self.modules:
+            module.train(mode)
+        return self
+
+    def eval(self) -> 'ModelWrapper':
+        return self.train(False)
+
+    def requires_grad_(self, requires_grad=True) -> 'ModelWrapper':
+        for module in self.modules:
+            for p in module.parameters():
+                p.requires_grad = requires_grad
+        return self
+
+    def zero_grad(self) -> 'ModelWrapper':
+        for module in self.modules:
+            for p in module.parameters():
+                if p.grad is not None:
+                    p.grad.detach_()
+                    p.grad.zero_()
+        return self
+
+    def parameters(self):
+        return itertools.chain([module.parameters() for module in self.modules])
+
+    def named_parameters(self):
+        return itertools.chain([module.named_parameters() for module in self.modules])
 
     @abc.abstractmethod
-    def __call__(self, x):
-        """
-        Calls the model or agent on the given inputs, and returns the desired output.
-        :param x: inputs to the model or agent
-        :return: model output
-        """
+    def forward(self, x):
         pass
 
-    @abc.abstractmethod
-    def get_parameter_tensor(self, deepcopy=False) -> model_tensor.ParameterTensor:
-        """
-        Return a ParameterTensor wrapping the parameters of the underlying model. The
-        parameters can either be returned as a view of the model parameters or as a copy.
-        :param deepcopy: whether to view or deepcopy the model parameters
-        :return: view or deepcopy of accessible model parameters
-        """
-        pass
 
-    @abc.abstractmethod
-    def set_parameter_tensor(self, new_parameters: model_tensor.ParameterTensor):
-        """
-        Sets the parameters of the wrapped model to the given ParameterVector.
-        :param new_parameters: ParameterVector of new parameters
-        :return: none
-        """
-        pass
+class SimpleModelWrapper(ModelWrapper):
+    def __init__(self, model: torch.nn.Module):
+        super().__init__([model])
 
+    def forward(self, x):
+        return self.modules[0](x)
+
+
+class GeneralModelWrapper(ModelWrapper):
+    def __init__(self, model, modules: list, forward_fn):
+        super().__init__(modules)
+        self.model = model
+        self.forward_fn = forward_fn
+
+    def forward(self, x):
+        return self.forward_fn(self.model, x)
+
+
+def wrap_model(model):
+    if isinstance(model, ModelWrapper):
+        return model
+    elif isinstance(model, torch.nn.Module):
+        return SimpleModelWrapper(model)
+    else:
+        raise ValueError('Only models of type torch.nn.modules.module.Module can be passed without a wrapper.')

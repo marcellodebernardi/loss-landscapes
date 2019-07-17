@@ -3,7 +3,7 @@ import torch.autograd
 from loss_landscapes.model_metrics.metric import Metric
 
 
-class ExpectedReturnEvaluator(Metric):
+class ExpectedReturnMetric(Metric):
     def __init__(self, gym_environment, n_episodes):
         super().__init__()
         self.gym_environment = gym_environment
@@ -15,13 +15,13 @@ class ExpectedReturnEvaluator(Metric):
         # compute total return for each episode
         for episode in range(self.n_episodes):
             episode_return = 0
-            obs, reward, done, _ = self.env.step(
-                agent(torch.from_numpy(self.env.reset()).float())
+            obs, reward, done, _ = self.gym_environment.step(
+                agent(torch.from_numpy(self.gym_environment.reset()).float())
             )
             episode_return += reward
 
             while not done:
-                obs, reward, done, info = self.env.step(
+                obs, reward, done, info = self.gym_environment.step(
                     agent(torch.from_numpy(obs).float())
                 )
                 episode_return += reward
