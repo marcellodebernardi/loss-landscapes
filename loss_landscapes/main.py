@@ -17,17 +17,16 @@ def point(model: typing.Union[torch.nn.Module, ModelWrapper], metric: Metric) ->
     Returns the computed value of the evaluation function applied to the model
     or agent at a specific point in parameter space.
 
-    The Evaluator supplied has to be a subclass of the evaluations.evaluator.Evaluator class,
-    and must specify a procedure whereby the model passed to it is evaluated on the
+    The Metric supplied has to be a subclass of the loss_landscapes.metrics.Metric
+    class, and must specify a procedure whereby the model passed to it is evaluated on the
     task of interest, returning the resulting quantity (such as loss, loss gradient, etc).
 
-    The AgentInterface is optional, and needs only be supplied if the 'model' argument
-    is not a simple NN model (such as a nn.Module in PyTorch), but rather a more complex
-    agent with an arbitrary interface and structure.
+    The model supplied can be either a torch.nn.Module model, or a ModelWrapper from the
+    loss_landscapes library for more complex cases.
 
-    :param model: the model defining the point in parameter space
-    :param metric: list of function of form evaluation_f(model), used to evaluate model loss
-    :return: quantity specified by evaluation_f at point in parameter space
+    :param model: the model or model wrapper defining the point in parameter space
+    :param metric: Metric object used to evaluate model
+    :return: quantity specified by Metric at point in parameter space
     """
     return metric(wrap_model(model))
 
@@ -39,6 +38,8 @@ def linear_interpolation(model_start: typing.Union[torch.nn.Module, ModelWrapper
     """
     Returns the computed value of the evaluation function applied to the model or
     agent along a linear subspace of the parameter space defined by two end points.
+    The models supplied can be either torch.nn.Module models, or ModelWrapper objects
+    from the loss_landscapes library for more complex cases.
 
     That is, given two models, for both of which the model's parameters define a
     vertex in parameter space, the evaluation is computed at the given number of steps
@@ -55,13 +56,9 @@ def linear_interpolation(model_start: typing.Union[torch.nn.Module, ModelWrapper
     For more details, see `https://arxiv.org/abs/1712.09913v3`. It is recommended to
     use random_line() with filter normalization instead.
 
-    The Evaluator supplied has to be a subclass of the evaluations.evaluator.Evaluator class,
+    The Metric supplied has to be a subclass of the loss_landscapes.metrics.Metric class,
     and must specify a procedure whereby the model passed to it is evaluated on the
     task of interest, returning the resulting quantity (such as loss, loss gradient, etc).
-
-    The AgentInterface is optional, and needs only be supplied if the 'model' argument
-    is not a simple NN model (such as a nn.Module in PyTorch), but rather a more complex
-    agent with an arbitrary interface and structure.
 
     :param model_start: the model defining the start point of the line in parameter space
     :param model_end: the model defining the end point of the line in parameter space
@@ -93,6 +90,8 @@ def random_line(model_start: typing.Union[torch.nn.Module, ModelWrapper], metric
     """
     Returns the computed value of the evaluation function applied to the model or agent along a
     linear subspace of the parameter space defined by a start point and a randomly sampled direction.
+    The models supplied can be either torch.nn.Module models, or ModelWrapper objects
+    from the loss_landscapes library for more complex cases.
 
     That is, given a neural network model, whose parameters define a point in parameter
     space, and a distance, the evaluation is computed at 'steps' points along a random
@@ -113,17 +112,12 @@ def random_line(model_start: typing.Union[torch.nn.Module, ModelWrapper], metric
     For more details, see `https://arxiv.org/abs/1712.09913v3`. It is recommended to
     normalize the direction, preferably with the 'filter' option.
 
-    The Evaluator supplied has to be a subclass of the evaluations.evaluator.Evaluator class,
+    The Metric supplied has to be a subclass of the loss_landscapes.metrics.Metric class,
     and must specify a procedure whereby the model passed to it is evaluated on the
     task of interest, returning the resulting quantity (such as loss, loss gradient, etc).
 
-    The AgentInterface is optional, and needs only be supplied if the 'model' argument
-    is not a simple NN model (such as a nn.Module in PyTorch), but rather a more complex
-    agent with an arbitrary interface and structure.
-
     :param model_start: model to be evaluated, whose current parameters represent the start point
     :param metric: function of form evaluation_f(model), used to evaluate model loss
-    :param agent_interface: defines how to access components etc for complex agents
     :param distance: maximum distance in parameter space from the start point
     :param steps: at how many steps from start to end the model is evaluated
     :param normalization: normalization of direction other, must be one of 'filter', 'layer', 'model'
@@ -168,6 +162,8 @@ def planar_interpolation(model_start: typing.Union[torch.nn.Module, ModelWrapper
     """
     Returns the computed value of the evaluation function applied to the model or agent along
     a planar subspace of the parameter space defined by a start point and two end points.
+    The models supplied can be either torch.nn.Module models, or ModelWrapper objects
+    from the loss_landscapes library for more complex cases.
 
     That is, given two models, for both of which the model's parameters define a
     vertex in parameter space, the loss is computed at the given number of steps
@@ -187,13 +183,9 @@ def planar_interpolation(model_start: typing.Union[torch.nn.Module, ModelWrapper
     could be another randomly initialized model, since in a high-dimensional space
     randomly sampled directions are most likely to be orthogonal.
 
-    The Evaluator supplied has to be a subclass of the evaluations.evaluator.Evaluator class,
+    The Metric supplied has to be a subclass of the loss_landscapes.metrics.Metric class,
     and must specify a procedure whereby the model passed to it is evaluated on the
     task of interest, returning the resulting quantity (such as loss, loss gradient, etc).
-
-    The AgentInterface is optional, and needs only be supplied if the 'model' argument
-    is not a simple NN model (such as a nn.Module in PyTorch), but rather a more complex
-    agent with an arbitrary interface and structure.
 
     :param model_start: the model defining the origin point of the plane in parameter space
     :param model_end_one: the model representing the end point of the first direction defining the plane
@@ -242,6 +234,8 @@ def random_plane(model: typing.Union[torch.nn.Module, ModelWrapper], metric: Met
     """
     Returns the computed value of the evaluation function applied to the model or agent along a planar
     subspace of the parameter space defined by a start point and two randomly sampled directions.
+    The models supplied can be either torch.nn.Module models, or ModelWrapper objects
+    from the loss_landscapes library for more complex cases.
 
     That is, given a neural network model, whose parameters define a point in parameter
     space, and a distance, the loss is computed at 'steps' * 'steps' points along the
@@ -263,13 +257,9 @@ def random_plane(model: typing.Union[torch.nn.Module, ModelWrapper], metric: Met
     network weights. For more details, see `https://arxiv.org/abs/1712.09913v3`. It is
     recommended to normalize the directions, preferably with the 'filter' option.
 
-    The Evaluator supplied has to be a subclass of the evaluations.evaluator.Evaluator class,
+    The Metric supplied has to be a subclass of the loss_landscapes.metrics.Metric class,
     and must specify a procedure whereby the model passed to it is evaluated on the
     task of interest, returning the resulting quantity (such as loss, loss gradient, etc).
-
-    The AgentInterface is optional, and needs only be supplied if the 'model' argument
-    is not a simple NN model (such as a nn.Module in PyTorch), but rather a more complex
-    agent with an arbitrary interface and structure.
 
     :param model: the model defining the origin point of the plane in parameter space
     :param metric: function of form evaluation_f(model), used to evaluate model loss
