@@ -143,7 +143,7 @@ def random_line(model_start: typing.Union[torch.nn.Module, ModelWrapper], metric
     else:
         raise AttributeError('Unsupported normalization argument. Supported values are model, layer, and filter')
 
-    direction.mul_(((start_point.model_norm() / distance) / steps) / direction.model_norm())
+    direction.mul_(((start_point.model_norm() * distance) / steps) / direction.model_norm())
 
     data_values = []
     for i in range(steps):
@@ -290,8 +290,8 @@ def random_plane(model: typing.Union[torch.nn.Module, ModelWrapper], metric: Met
         raise AttributeError('Unsupported normalization argument. Supported values are model, layer, and filter')
 
     # scale to match steps and total distance
-    dir_one.mul_(((start_point.model_norm() / distance) / steps) / dir_one.model_norm())
-    dir_two.mul_(((start_point.model_norm() / distance) / steps) / dir_two.model_norm())
+    dir_one.mul_(((start_point.model_norm() * distance) / steps) / dir_one.model_norm())
+    dir_two.mul_(((start_point.model_norm() * distance) / steps) / dir_two.model_norm())
     # Move start point so that original start params will be in the center of the plot
     dir_one.mul_(steps / 2)
     dir_two.mul_(steps / 2)
