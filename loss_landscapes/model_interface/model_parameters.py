@@ -214,6 +214,12 @@ class ModelParameters:
         :return: none
         """
         for l in range(len(self.parameters)):
+            # normalize one-dimensional bias vectors
+            if len(self.parameters[l].size()) == 1:
+                norm = ref_point.parameters[l].norm(order) if ref_point is not None \
+                    else self.parameters[l].norm(order)
+                self.parameters[l] /= norm
+            # normalize two-dimensional weight vectors
             for f in range(len(self.parameters[l])):
                 norm = ref_point.filter_norm((l, f), order) if ref_point is not None \
                     else self.filter_norm((l, f), order)
