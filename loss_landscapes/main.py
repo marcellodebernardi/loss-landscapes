@@ -7,7 +7,7 @@ import typing
 import torch.nn
 import numpy as np
 from loss_landscapes.model_interface.model_wrapper import ModelWrapper, wrap_model
-from loss_landscapes.model_interface.model_parameters import rand_u_like
+from loss_landscapes.model_interface.model_parameters import rand_u_like, orthogonal_to
 from loss_landscapes.metrics.metric import Metric
 
 
@@ -273,7 +273,7 @@ def random_plane(model: typing.Union[torch.nn.Module, ModelWrapper], metric: Met
 
     start_point = model_start_wrapper.get_module_parameters()
     dir_one = rand_u_like(start_point)
-    dir_two = rand_u_like(start_point)
+    dir_two = orthogonal_to(dir_one)
 
     if normalization == 'model':
         dir_one.model_normalize_(start_point)

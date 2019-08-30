@@ -25,8 +25,8 @@ class ModelParameters:
     """
 
     def __init__(self, parameters: list):
-        if not isinstance(parameters, list) and all(isinstance(p, torch.nn.parameter.Parameter) for p in parameters):
-            raise AttributeError('Argument to ModelParameter is not a list of torch.nn.parameter.Parameter objects.')
+        if not isinstance(parameters, list) and all(isinstance(p, torch.Tensor) for p in parameters):
+            raise AttributeError('Argument to ModelParameter is not a list of torch.Tensor objects.')
 
         self.parameters = parameters
 
@@ -53,7 +53,7 @@ class ModelParameters:
         """
         return self.parameters[index]
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: 'ModelParameters') -> bool:
         """
         Compares this parameter tensor for equality with the argument tensor, using the == operator.
         :param other: the object to compare to
@@ -64,7 +64,7 @@ class ModelParameters:
         else:
             return all(torch.equal(p_self, p_other) for p_self, p_other in zip(self.parameters, other.parameters))
 
-    def __add__(self, other) -> 'ModelParameters':
+    def __add__(self, other: 'ModelParameters') -> 'ModelParameters':
         """
         Constructively returns the result of addition between this tensor and another.
         :param other: other to add
@@ -72,7 +72,7 @@ class ModelParameters:
         """
         return ModelParameters([self[idx] + other[idx] for idx in range(len(self))])
 
-    def __radd__(self, other) -> 'ModelParameters':
+    def __radd__(self, other: 'ModelParameters') -> 'ModelParameters':
         """
         Constructively returns the result of addition between this tensor and another.
         :param other: model parameters to add
@@ -80,7 +80,7 @@ class ModelParameters:
         """
         return self.__add__(other)
 
-    def add_(self, other):
+    def add_(self, other: 'ModelParameters'):
         """
         In-place addition between this tensor and another.
         :param other: model parameters to add
@@ -89,7 +89,7 @@ class ModelParameters:
         for idx in range(len(self)):
             self.parameters[idx] += other[idx]
 
-    def __sub__(self, other) -> 'ModelParameters':
+    def __sub__(self, other: 'ModelParameters') -> 'ModelParameters':
         """
         Constructively returns the result of subtracting another tensor from this one.
         :param other: model parameters to subtract
@@ -97,7 +97,7 @@ class ModelParameters:
         """
         return ModelParameters([self[idx] - other[idx] for idx in range(len(self))])
 
-    def __rsub__(self, other) -> 'ModelParameters':
+    def __rsub__(self, other: 'ModelParameters') -> 'ModelParameters':
         """
         Constructively returns the result of subtracting this tensor from another one.
         :param other: other to subtract from
@@ -105,7 +105,7 @@ class ModelParameters:
         """
         return self.__sub__(other)
 
-    def sub_(self, vector):
+    def sub_(self, vector: 'ModelParameters'):
         """
         In-place subtraction of another tensor from this one.
         :param vector: other to subtract
@@ -173,7 +173,7 @@ class ModelParameters:
         for idx in range(len(self)):
             self.parameters[idx] //= scalar
 
-    def __matmul__(self, other) -> 'ModelParameters':
+    def __matmul__(self, other: 'ModelParameters') -> 'ModelParameters':
         """
         Constructively returns the result of tensor-multiplication of this tensor by another tensor.
         :param other: other tensor
@@ -181,7 +181,18 @@ class ModelParameters:
         """
         raise NotImplementedError()
 
-    def model_normalize_(self, ref_point, order=2):
+    def dot(self, other: 'ModelParameters') -> float:
+        """
+        Returns the vector dot product of this ModelParameters vector and the given other vector.
+        :param other: other ModelParameters vector
+        :return: dot product of self and other
+        """
+        param_products = []
+        for idx in range(len(self.parameters)):
+            param_products.append((self.parameters[idx] * other.parameters[idx]).sum().item())
+        return sum(param_products)
+
+    def model_normalize_(self, ref_point: 'ModelParameters', order=2):
         """
         In-place model-wise normalization of the tensor.
         :param ref_point: use this model's norm, if given
@@ -191,7 +202,7 @@ class ModelParameters:
         for parameter in self.parameters:
             parameter *= (ref_point.model_norm(order) / self.model_norm())
 
-    def layer_normalize_(self, ref_point=None, order=2):
+    def layer_normalize_(self, ref_point: 'ModelParameters', order=2):
         """
         In-place layer-wise normalization of the tensor.
         :param ref_point: use this model's layer norms, if given
@@ -202,7 +213,7 @@ class ModelParameters:
         for layer_idx, parameter in enumerate(self.parameters, 0):
             parameter *= (ref_point.layer_norm(layer_idx, order) / self.layer_norm(layer_idx, order))
 
-    def filter_normalize_(self, ref_point=None, order=2):
+    def filter_normalize_(self, ref_point: 'ModelParameters', order=2):
         """
         In-place filter-wise normalization of the tensor.
         :param ref_point: use this model's filter norms, if given
@@ -264,7 +275,7 @@ class ModelParameters:
         return self.parameters
 
 
-def rand_u_like(example_vector) -> ModelParameters:
+def rand_u_like(example_vector: ModelParameters) -> ModelParameters:
     """
     Create a new ModelParameters object of size and shape compatible with the given
     example vector, such that the values in the ModelParameter are uniformly distributed
@@ -280,7 +291,7 @@ def rand_u_like(example_vector) -> ModelParameters:
     return ModelParameters(new_vector)
 
 
-def rand_n_like(example_vector) -> ModelParameters:
+def rand_n_like(example_vector: ModelParameters) -> ModelParameters:
     """
     Create a new ModelParameters object of size and shape compatible with the given
     example vector, such that the values in the ModelParameter are normally distributed
@@ -294,6 +305,18 @@ def rand_n_like(example_vector) -> ModelParameters:
         new_vector.append(torch.randn(size=param.size(), dtype=example_vector[0].dtype))
 
     return ModelParameters(new_vector)
+
+
+def orthogonal_to(vector: ModelParameters) -> ModelParameters:
+    """
+    Create a new ModelParameters object of size and shape compatible with the given
+    example vector, such that the two vectors are very nearly orthogonal.
+    :param vector: original vector
+    :return: new vector that is very nearly orthogonal to original vector
+    """
+    new_vector = rand_u_like(vector)
+    new_vector = new_vector - new_vector.dot(vector) * vector / math.pow(vector.model_norm(2), 2)
+    return new_vector
 
 
 def add(vector_a: ModelParameters, vector_b: ModelParameters) -> ModelParameters:
