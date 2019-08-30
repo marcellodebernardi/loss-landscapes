@@ -143,7 +143,7 @@ def random_line(model_start: typing.Union[torch.nn.Module, ModelWrapper], metric
     else:
         raise AttributeError('Unsupported normalization argument. Supported values are model, layer, and filter')
 
-    direction.mul_(distance / steps)
+    direction.mul_((distance / steps) / direction.model_norm())
 
     data_values = []
     for i in range(steps):
@@ -289,11 +289,12 @@ def random_plane(model: typing.Union[torch.nn.Module, ModelWrapper], metric: Met
     else:
         raise AttributeError('Unsupported normalization argument. Supported values are model, layer, and filter')
 
-    # Move start point so that original start params will be in the center of the plot.
-    # It would be cleaner to write start_point.sub_(dir_one * (steps / 2)), but this
-    # uses a constructive operation which can cause OutOfMemoryError on large models.
-    dir_one.mul_(distance / 2)
-    dir_two.mul_(distance / 2)
+    # scale to match steps and total distance
+    dir_one.mul_((distance / steps) / dir_one.model_norm())
+    dir_two.mul_((distance / steps) / dir_two.model_norm())
+    # Move start point so that original start params will be in the center of the plot
+    dir_one.mul_(steps / 2)
+    dir_two.mul_(steps / 2)
     start_point.sub_(dir_one)
     start_point.sub_(dir_two)
     dir_one.truediv_(steps / 2)
