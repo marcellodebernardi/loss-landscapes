@@ -286,7 +286,7 @@ def rand_u_like(example_vector: ModelParameters) -> ModelParameters:
     new_vector = []
 
     for param in example_vector:
-        new_vector.append(torch.rand(size=param.size(), dtype=example_vector[0].dtype))
+        new_vector.append(torch.rand(size=param.size(), dtype=example_vector[0].dtype).to(param.device))
 
     return ModelParameters(new_vector)
 
@@ -302,7 +302,7 @@ def rand_n_like(example_vector: ModelParameters) -> ModelParameters:
     new_vector = []
 
     for param in example_vector:
-        new_vector.append(torch.randn(size=param.size(), dtype=example_vector[0].dtype))
+        new_vector.append(torch.randn(size=param.size(), dtype=example_vector[0].dtype).to(param.device))
 
     return ModelParameters(new_vector)
 
