@@ -9,12 +9,12 @@ in low-dimensional subspaces of the model's parameter space. The library makes t
 such as those seen in [Visualizing the Loss Landscape of Neural Nets](https://arxiv.org/abs/1712.09913v3) much
 easier, aiding the analysis of the geometry of neural network loss landscapes.
 
-This library does not provide plotting facilities, letting the user define how the data should be plotted. Other
-deep learning frameworks are not supported, though a TensorFlow version, `loss-landscapes-tf`, is planned for
-a future release.
+This library does not provide plotting facilities, letting the user define how the data should be plotted.
 
-**NOTE: this library is in early development. Bugs are virtually a certainty, and the API is volatile. Do not use
-this library in production code. For prototyping and research, always use the newest version of the library.**
+> **Status:** after seven years without maintenance, `loss-landscapes` is under active development again. The
+> repository has been modernised and a substantial rewrite is coming, targeting current versions of Python and
+> PyTorch. Expect the API to change. Until then, treat the published release as research tooling rather than
+> production code, and prefer the newest version.
 
 
 ## 1. What is a Loss Landscape?
@@ -134,32 +134,7 @@ landscape = random_plane(agent_wrapper, metric, normalize="filter")
 ````
 
 
-
-## 5. WIP: Connecting Paths, Saddle Points, and Trajectory Tracking
-A number of features are currently under development, but as of yet incomplete.
-
-A number of papers in recent years have shown that loss landscapes of neural networks are dominated by a
-proliferation of saddle points, that good solutions are better described as large low-loss plateaus than as
-"well-bottom" points, and that for sufficiently high-dimensional networks, a low-loss path in parameter space can
-be found between almost any arbitrary pair of minima. In the future, the `loss-landscapes` library will feature
-implementations of algorithms for finding such low-loss connecting paths in the loss landscape, as well as tools to
-facilitate the study of saddle points.
-
-Some sort of trajectory tracking features are also under consideration, though at the time it's unclear what this
-should actually mean, as the optimization trajectory is implicitly tracked by the user's training loop. Any metric
-along the optimization trajectory can be tracked with libraries such as [ignite](https://github.com/pytorch/ignite)
-for PyTorch.
-
-
-## 6. Support for Other DL Libraries
-The `loss-landscapes` library was initially designed to be agnostic to the DL framework in use. However, with the
-increasing number of use cases to cover it became obvious that maintaining the original library-agnostic design
-was adding too much complexity to the code.
-
-A TensorFlow version, `loss-landscapes-tf`, is planned for the future.
-
-
-## 7. Installation and Use
+## 5. Installation and Use
 The package is available on PyPI. Install using `pip install loss-landscapes`. To use the library, import as follows:
 
 ````python
