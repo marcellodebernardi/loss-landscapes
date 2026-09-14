@@ -1,5 +1,6 @@
 import torch
 import torch.autograd
+
 from loss_landscapes.metrics.metric import Metric
 
 
@@ -21,9 +22,7 @@ class ExpectedReturnMetric(Metric):
             episode_return += reward
 
             while not done:
-                obs, reward, done, info = self.gym_environment.step(
-                    agent(torch.from_numpy(obs).float())
-                )
+                obs, reward, done, info = self.gym_environment.step(agent(torch.from_numpy(obs).float()))
                 episode_return += reward
             returns.append(episode_return)
 

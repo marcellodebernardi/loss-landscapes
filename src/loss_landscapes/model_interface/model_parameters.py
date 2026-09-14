@@ -11,6 +11,7 @@ the '__' suffix to the name of in-place operations.
 
 import copy
 import math
+
 import numpy as np
 import torch
 import torch.nn
@@ -26,7 +27,7 @@ class ModelParameters:
 
     def __init__(self, parameters: list):
         if not isinstance(parameters, list) and all(isinstance(p, torch.Tensor) for p in parameters):
-            raise AttributeError('Argument to ModelParameter is not a list of torch.Tensor objects.')
+            raise AttributeError("Argument to ModelParameter is not a list of torch.Tensor objects.")
 
         self.parameters = parameters
 
@@ -53,7 +54,7 @@ class ModelParameters:
         """
         return self.parameters[index]
 
-    def __eq__(self, other: 'ModelParameters') -> bool:
+    def __eq__(self, other: "ModelParameters") -> bool:
         """
         Compares this parameter tensor for equality with the argument tensor, using the == operator.
         :param other: the object to compare to
@@ -64,7 +65,7 @@ class ModelParameters:
         else:
             return all(torch.equal(p_self, p_other) for p_self, p_other in zip(self.parameters, other.parameters))
 
-    def __add__(self, other: 'ModelParameters') -> 'ModelParameters':
+    def __add__(self, other: "ModelParameters") -> "ModelParameters":
         """
         Constructively returns the result of addition between this tensor and another.
         :param other: other to add
@@ -72,7 +73,7 @@ class ModelParameters:
         """
         return ModelParameters([self[idx] + other[idx] for idx in range(len(self))])
 
-    def __radd__(self, other: 'ModelParameters') -> 'ModelParameters':
+    def __radd__(self, other: "ModelParameters") -> "ModelParameters":
         """
         Constructively returns the result of addition between this tensor and another.
         :param other: model parameters to add
@@ -80,7 +81,7 @@ class ModelParameters:
         """
         return self.__add__(other)
 
-    def add_(self, other: 'ModelParameters'):
+    def add_(self, other: "ModelParameters"):
         """
         In-place addition between this tensor and another.
         :param other: model parameters to add
@@ -89,7 +90,7 @@ class ModelParameters:
         for idx in range(len(self)):
             self.parameters[idx] += other[idx]
 
-    def __sub__(self, other: 'ModelParameters') -> 'ModelParameters':
+    def __sub__(self, other: "ModelParameters") -> "ModelParameters":
         """
         Constructively returns the result of subtracting another tensor from this one.
         :param other: model parameters to subtract
@@ -97,7 +98,7 @@ class ModelParameters:
         """
         return ModelParameters([self[idx] - other[idx] for idx in range(len(self))])
 
-    def __rsub__(self, other: 'ModelParameters') -> 'ModelParameters':
+    def __rsub__(self, other: "ModelParameters") -> "ModelParameters":
         """
         Constructively returns the result of subtracting this tensor from another one.
         :param other: other to subtract from
@@ -105,7 +106,7 @@ class ModelParameters:
         """
         return self.__sub__(other)
 
-    def sub_(self, vector: 'ModelParameters'):
+    def sub_(self, vector: "ModelParameters"):
         """
         In-place subtraction of another tensor from this one.
         :param vector: other to subtract
@@ -114,7 +115,7 @@ class ModelParameters:
         for idx in range(len(self)):
             self.parameters[idx] -= vector[idx]
 
-    def __mul__(self, scalar) -> 'ModelParameters':
+    def __mul__(self, scalar) -> "ModelParameters":
         """
         Constructively returns the result of multiplying this tensor by a scalar.
         :param scalar: scalar to multiply by
@@ -122,7 +123,7 @@ class ModelParameters:
         """
         return ModelParameters([self[idx] * scalar for idx in range(len(self))])
 
-    def __rmul__(self, scalar) -> 'ModelParameters':
+    def __rmul__(self, scalar) -> "ModelParameters":
         """
         Constructively returns the result of multiplying this tensor by a scalar.
         :param scalar: scalar to multiply by
@@ -139,7 +140,7 @@ class ModelParameters:
         for idx in range(len(self)):
             self.parameters[idx] *= scalar
 
-    def __truediv__(self, scalar) -> 'ModelParameters':
+    def __truediv__(self, scalar) -> "ModelParameters":
         """
         Constructively returns the result of true-dividing this tensor by a scalar.
         :param scalar: scalar to divide by
@@ -156,7 +157,7 @@ class ModelParameters:
         for idx in range(len(self)):
             self.parameters[idx] /= scalar
 
-    def __floordiv__(self, scalar) -> 'ModelParameters':
+    def __floordiv__(self, scalar) -> "ModelParameters":
         """
         Constructively returns the result of floor-dividing this tensor by a scalar.
         :param scalar: scalar to divide by
@@ -173,7 +174,7 @@ class ModelParameters:
         for idx in range(len(self)):
             self.parameters[idx] //= scalar
 
-    def __matmul__(self, other: 'ModelParameters') -> 'ModelParameters':
+    def __matmul__(self, other: "ModelParameters") -> "ModelParameters":
         """
         Constructively returns the result of tensor-multiplication of this tensor by another tensor.
         :param other: other tensor
@@ -181,7 +182,7 @@ class ModelParameters:
         """
         raise NotImplementedError()
 
-    def dot(self, other: 'ModelParameters') -> float:
+    def dot(self, other: "ModelParameters") -> float:
         """
         Returns the vector dot product of this ModelParameters vector and the given other vector.
         :param other: other ModelParameters vector
@@ -192,7 +193,7 @@ class ModelParameters:
             param_products.append((self.parameters[idx] * other.parameters[idx]).sum().item())
         return sum(param_products)
 
-    def model_normalize_(self, ref_point: 'ModelParameters', order=2):
+    def model_normalize_(self, ref_point: "ModelParameters", order=2):
         """
         In-place model-wise normalization of the tensor.
         :param ref_point: use this model's norm, if given
@@ -200,9 +201,9 @@ class ModelParameters:
         :return: none
         """
         for parameter in self.parameters:
-            parameter *= (ref_point.model_norm(order) / self.model_norm())
+            parameter *= ref_point.model_norm(order) / self.model_norm()
 
-    def layer_normalize_(self, ref_point: 'ModelParameters', order=2):
+    def layer_normalize_(self, ref_point: "ModelParameters", order=2):
         """
         In-place layer-wise normalization of the tensor.
         :param ref_point: use this model's layer norms, if given
@@ -211,9 +212,9 @@ class ModelParameters:
         """
         # in-place normalize each parameter
         for layer_idx, parameter in enumerate(self.parameters, 0):
-            parameter *= (ref_point.layer_norm(layer_idx, order) / self.layer_norm(layer_idx, order))
+            parameter *= ref_point.layer_norm(layer_idx, order) / self.layer_norm(layer_idx, order)
 
-    def filter_normalize_(self, ref_point: 'ModelParameters', order=2):
+    def filter_normalize_(self, ref_point: "ModelParameters", order=2):
         """
         In-place filter-wise normalization of the tensor.
         :param ref_point: use this model's filter norms, if given
@@ -223,7 +224,7 @@ class ModelParameters:
         for l in range(len(self.parameters)):
             # normalize one-dimensional bias vectors
             if len(self.parameters[l].size()) == 1:
-                self.parameters[l] *= (ref_point.parameters[l].norm(order) / self.parameters[l].norm(order))
+                self.parameters[l] *= ref_point.parameters[l].norm(order) / self.parameters[l].norm(order)
             # normalize two-dimensional weight vectors
             for f in range(len(self.parameters[l])):
                 self.parameters[l][f] *= ref_point.filter_norm((l, f), order) / (self.filter_norm((l, f), order))
@@ -235,10 +236,7 @@ class ModelParameters:
         :return: L-norm of tensor
         """
         # L-n norm of model where we treat the model as a flat other
-        return math.pow(sum([
-            torch.pow(layer, order).sum().item()
-            for layer in self.parameters
-        ]), 1.0 / order)
+        return math.pow(sum([torch.pow(layer, order).sum().item() for layer in self.parameters]), 1.0 / order)
 
     def layer_norm(self, index, order=2) -> float:
         """
