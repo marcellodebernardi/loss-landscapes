@@ -36,6 +36,10 @@ Changelog = "https://github.com/marcellodebernardi/loss-landscapes/blob/master/C
 
 [tool.hatch.version]
 source = "vcs"
+# Without this, an untagged commit builds as e.g. 3.0.7.dev11+g82d3392. That trailing
+# local-version segment is valid PEP 440 but is rejected outright by PyPI and TestPyPI,
+# which would make every dispatch run of release.yml fail at upload.
+raw-options = { local_scheme = "no-local-version" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/loss_landscapes"]

@@ -10,6 +10,11 @@ Purely presentational metadata differences (the `Metadata-Version` bump, PEP 639
 expressions, `Home-page` becoming `Project-URL`) are expected and ignored: they carry no
 meaning for resolvers.
 
+Exit codes:
+    0  the dependency contract is unchanged
+    1  the contract changed
+    2  the comparison could not be run (PyPI unreachable)
+
 Usage:
     python scripts/compare_with_published.py [--version 3.0.6]
 """
@@ -24,8 +29,13 @@ import os
 import subprocess
 import sys
 import tempfile
+import urllib.error
 import urllib.request
 import zipfile
+
+# Exit code used when the comparison could not be performed at all, as opposed to 1, which
+# means the contract genuinely changed. Lets CI tell an outage from a real failure.
+UNAVAILABLE = 2
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PACKAGE = "loss-landscapes"
@@ -49,16 +59,26 @@ def fetch_published_metadata(version: str, workdir: str) -> email.message.Messag
 
     Returns:
         The parsed METADATA of the published wheel.
+
+    Raises:
+        SystemExit: with UNAVAILABLE if PyPI cannot be reached, so that an index outage is
+            distinguishable from a genuine change to the dependency contract.
     """
-    with urllib.request.urlopen(f"https://pypi.org/pypi/{PACKAGE}/{version}/json") as response:
-        release = json.load(response)
+    try:
+        with urllib.request.urlopen(f"https://pypi.org/pypi/{PACKAGE}/{version}/json", timeout=30) as response:
+            release = json.load(response)
 
-    wheels = [f for f in release["urls"] if f["packagetype"] == "bdist_wheel"]
-    if not wheels:
-        sys.exit(f"error: {PACKAGE} {version} has no wheel published on PyPI")
+        wheels = [f for f in release["urls"] if f["packagetype"] == "bdist_wheel"]
+        if not wheels:
+            sys.exit(f"error: {PACKAGE} {version} has no wheel published on PyPI")
 
-    wheel_path = os.path.join(workdir, "published.whl")
-    urllib.request.urlretrieve(wheels[0]["url"], wheel_path)
+        wheel_path = os.path.join(workdir, "published.whl")
+        urllib.request.urlretrieve(wheels[0]["url"], wheel_path)
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+        print(f"could not reach PyPI to fetch {PACKAGE} {version}: {exc}", file=sys.stderr)
+        print("this is an infrastructure failure, not a change to the dependency contract", file=sys.stderr)
+        raise SystemExit(UNAVAILABLE) from exc
+
     return read_wheel_metadata(wheel_path)
 
 

@@ -132,20 +132,32 @@ def test_linear_interpolation_ends_at_the_second_model(model, other_model, metri
 
 
 def test_random_plane_is_centred_on_the_start_point(model, metric):
-    """The start point should be interior to the sampled plane, not at a corner.
+    """The original parameters must land in the middle of the sampled grid.
 
-    random_plane shifts the model back by half the plane before evaluating, so that the
-    original parameters land in the middle of the returned grid.
+    random_plane shifts the model back by half the plane before evaluating. The centroid
+    of the points it evaluates should therefore sit on the original start point, give or
+    take the half-step the grid is offset by.
     """
     before = snapshot(model)
     steps = 8
+    positions = []
 
-    loss_landscapes.random_plane(model, metric, distance=1, steps=steps, normalization=None)
+    class RecordPosition:
+        def __call__(self, model_wrapper):
+            positions.append(snapshot(model_wrapper.get_modules()[0]))
+            return 0.0
 
-    # The walk ends one full row past the far corner; what matters is that the start
-    # point is interior to the plane rather than at a corner of it.
-    travelled = displacement_norm(before, snapshot(model))
-    assert travelled > 0
+    loss_landscapes.random_plane(model, RecordPosition(), distance=1, steps=steps, normalization=None)
+
+    assert len(positions) == steps * steps
+
+    centroid = np.mean([p.as_numpy() for p in positions], axis=0)
+    offset = float(np.linalg.norm(centroid - before.as_numpy()))
+
+    # One grid step, as a generous tolerance on "the middle": the walk starts a half-step
+    # into the plane, so the centroid is displaced by that much and no more.
+    grid_step = before.model_norm() * 1.0 / steps
+    assert offset < grid_step
 
 
 @pytest.mark.parametrize("deepcopy_model", [True, False])

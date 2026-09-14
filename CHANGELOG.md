@@ -31,8 +31,10 @@ published 3.0.6 release.
 
 - The wheel no longer contains ~60 stale modules from the 1.x and 2.x refactors, which the
   3.0.6 wheel shipped because it was built over a dirty `build/` directory.
-- The distribution no longer ships the `tests/` package, which
-  `find_packages(exclude='tests')` failed to exclude because it was passed a string.
+- The sdist no longer ships test files that were never committed to git.
+  `find_packages(exclude='tests')` was passed a string rather than a list, so setuptools
+  iterated it character by character and excluded nothing. The sdist still contains the
+  committed `tests/` directory, which is conventional; the wheel contains neither.
 
 Several long-standing library defects were found while writing the tests. They are pinned
 by strict `xfail` markers rather than fixed, so that this release stays an infrastructure

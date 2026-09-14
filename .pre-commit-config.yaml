@@ -36,10 +36,15 @@ repos:
     hooks:
       - id: uv-lock
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.18.2
+  # Run mypy out of the project environment rather than mirrors-mypy, which would build a
+  # second virtualenv and download an unpinned torch into it -- gigabytes duplicated, and
+  # free to drift from the version uv.lock pins the tests to.
+  - repo: local
     hooks:
       - id: mypy
-        # Match the CI invocation: type-check the package only, not the test suite.
+        name: mypy
+        entry: uv run mypy
+        language: system
+        types: [python]
         files: ^src/
-        additional_dependencies: [numpy, torch]
+        pass_filenames: false

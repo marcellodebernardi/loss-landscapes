@@ -57,7 +57,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --group test
+        # --no-default-groups, or uv also installs the `dev` group, which pulls in ruff,
+        # mypy and pre-commit that this job never invokes.
+        run: uv sync --no-default-groups --group test
 
       - name: Run tests
         run: uv run pytest --cov=loss_landscapes --cov-report=term-missing
@@ -80,6 +82,12 @@ jobs:
 
       - name: Check distribution metadata
         run: uvx twine check dist/*
+
+      # Tests import the installed package, which under an editable install is the source
+      # tree, so only a check on the artifact itself can catch a wheel full of stale
+      # modules of the kind 3.0.6 shipped.
+      - name: Verify wheel contents
+        run: uv run --no-project python scripts/check_wheel_contents.py dist/*.whl
 
       # TODO: the packaging rewrite is meant to be invisible to anyone installing the
       # package, and this fails the build if the contract drifts. Drop this step once the

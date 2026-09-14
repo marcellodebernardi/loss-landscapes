@@ -45,11 +45,12 @@ def test_module_imports(name):
     importlib.import_module(name)
 
 
-def test_package_contains_no_unexpected_top_level_modules():
-    """The wheel must contain only the four real subpackages.
+def test_source_tree_contains_no_unexpected_top_level_modules():
+    """The importable package has exactly the four subpackages we expect.
 
-    The published 3.0.6 wheel carried ~60 stale modules from earlier refactors, because it
-    was built over a dirty build directory. Fail loudly if that ever comes back.
+    This inspects the source tree, not a built artifact: `loss_landscapes.__path__` points
+    at `src/` under the editable install. The equivalent check on the wheel is a step in
+    ci.yml's build job, since it needs a build to inspect.
     """
     expected = {"main", "metrics", "model_interface", "contrib"}
     found = {module.name for module in pkgutil.iter_modules(loss_landscapes.__path__)}

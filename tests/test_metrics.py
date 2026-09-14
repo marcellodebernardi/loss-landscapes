@@ -130,8 +130,7 @@ def test_train_and_eval_propagate_to_every_module(model, other_model):
 @pytest.mark.xfail(
     reason="ModelWrapper.parameters()/named_parameters() call itertools.chain on a list of "
     "generators instead of chaining the generators themselves, so they yield generator "
-    "objects rather than parameters. LossGradient feeds the result straight to "
-    "torch.autograd.grad and cannot work. "
+    "objects rather than parameters. "
     "See https://github.com/marcellodebernardi/loss-landscapes/issues/TBD",
     strict=True,
 )
@@ -140,12 +139,28 @@ def test_wrapper_parameters_yields_tensors(model):
 
 
 @pytest.mark.xfail(
-    reason="Depends on ModelWrapper.named_parameters(); see the xfail above. "
+    reason="wrap_model() calls requires_grad_(False) on every parameter, so nothing reached "
+    "through a wrapper is part of an autograd graph and LossGradient cannot differentiate "
+    "at all. This fires before the named_parameters() defect above is even reached, so both "
+    "have to be fixed before LossGradient works. "
     "See https://github.com/marcellodebernardi/loss-landscapes/issues/TBD",
     strict=True,
+    raises=RuntimeError,
 )
 def test_loss_gradient_returns_a_gradient(model, data, wrapper):
     inputs, target = data
     gradient = LossGradient(torch.nn.MSELoss(), inputs, target)(wrapper)
 
     assert isinstance(gradient, np.ndarray)
+
+
+def test_wrapping_makes_gradients_uncomputable(model, data, wrapper):
+    """Pin the cause of the xfail above, so fixing one defect does not mask the other.
+
+    Once requires_grad is restored this test fails, which is the signal that the
+    LossGradient xfail can be revisited.
+    """
+    inputs, target = data
+    loss = torch.nn.MSELoss()(wrapper.forward(inputs), target)
+
+    assert not loss.requires_grad
