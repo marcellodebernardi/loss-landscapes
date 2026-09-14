@@ -1,0 +1,15 @@
+version: 2
+
+updates:
+  # Actions only for now. The `pip` ecosystem is deliberately left out: this repository
+  # still declares the dependency contract of the 3.0.6 release, and dependency bumps
+  # are the subject of the follow-up PR. Add a `pip` entry once that lands.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "ci"
+    groups:
+      actions:
+        patterns: ["*"]
