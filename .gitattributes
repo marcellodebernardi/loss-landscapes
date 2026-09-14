@@ -1,0 +1,13 @@
+# Normalise line endings on the way into the repository. The 3.0.6 sdist published to
+# PyPI shipped with CRLF endings because it was built on Windows; this prevents a repeat.
+* text=auto eol=lf
+
+# Binary assets
+*.png binary
+*.jpg binary
+
+# Notebooks produce unreadable diffs; mark them so GitHub collapses them by default.
+*.ipynb linguist-generated=true
+
+# Lockfiles are generated: collapse them in review, but keep them in version control.
+uv.lock linguist-generated=true
