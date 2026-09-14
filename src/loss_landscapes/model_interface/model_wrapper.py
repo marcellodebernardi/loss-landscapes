@@ -1,8 +1,10 @@
-""" Class used to define interface to complex models """
+"""Class used to define interface to complex models"""
 
 import abc
 import itertools
+
 import torch.nn
+
 from loss_landscapes.model_interface.model_parameters import ModelParameters
 
 
@@ -16,21 +18,21 @@ class ModelWrapper(abc.ABC):
     def get_module_parameters(self) -> ModelParameters:
         return ModelParameters([p for module in self.modules for p in module.parameters()])
 
-    def train(self, mode=True) -> 'ModelWrapper':
+    def train(self, mode=True) -> "ModelWrapper":
         for module in self.modules:
             module.train(mode)
         return self
 
-    def eval(self) -> 'ModelWrapper':
+    def eval(self) -> "ModelWrapper":
         return self.train(False)
 
-    def requires_grad_(self, requires_grad=True) -> 'ModelWrapper':
+    def requires_grad_(self, requires_grad=True) -> "ModelWrapper":
         for module in self.modules:
             for p in module.parameters():
                 p.requires_grad = requires_grad
         return self
 
-    def zero_grad(self) -> 'ModelWrapper':
+    def zero_grad(self) -> "ModelWrapper":
         for module in self.modules:
             for p in module.parameters():
                 if p.grad is not None:
@@ -73,4 +75,4 @@ def wrap_model(model):
     elif isinstance(model, torch.nn.Module):
         return SimpleModelWrapper(model).requires_grad_(False)
     else:
-        raise ValueError('Only models of type torch.nn.modules.module.Module can be passed without a wrapper.')
+        raise ValueError("Only models of type torch.nn.modules.module.Module can be passed without a wrapper.")

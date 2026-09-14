@@ -4,20 +4,23 @@ computing the loss at different points in parameter space. This includes things 
 et al.'s Automated Nudged Elastic Band algorithm.
 """
 
-
 import abc
 import copy
+
 import numpy as np
+
 from loss_landscapes.model_interface.model_interface import wrap_model
 
 
 class _ParametricCurve(abc.ABC):
-    """ A _ParametricCurve is used in the Garipov path search algorithm. """
+    """A _ParametricCurve is used in the Garipov path search algorithm."""
+
     # todo
 
 
 class _PolygonChain(_ParametricCurve):
-    """ A _ParametricCurve consisting of consecutive line segments. """
+    """A _ParametricCurve consisting of consecutive line segments."""
+
     # todo
     pass
 
@@ -33,6 +36,7 @@ class _BezierCurve(_ParametricCurve):
     In this library, each point is a neural network model with a specific value assignment
     to the model parameters.
     """
+
     def __init__(self, model_start, model_end, order=2):
         """
         Define a Bezier curve between a start point and an end point. The order of the
@@ -46,7 +50,7 @@ class _BezierCurve(_ParametricCurve):
         """
         super().__init__()
         if order != 2:
-            raise NotImplementedError('Currently only order 2 bezier curves are supported.')
+            raise NotImplementedError("Currently only order 2 bezier curves are supported.")
 
         self.model_start_wrapper = wrap_model(copy.deepcopy(model_start))
         self.model_end_wrapper = wrap_model(copy.deepcopy(model_end))
@@ -70,13 +74,13 @@ class _BezierCurve(_ParametricCurve):
 
 
 def auto_neb() -> np.ndarray:
-    """ Automatic Nudged Elastic Band algorithm, as used in https://arxiv.org/abs/1803.00885 """
+    """Automatic Nudged Elastic Band algorithm, as used in https://arxiv.org/abs/1803.00885"""
     # todo return list of points in parameter space to represent trajectory
     # todo figure out how to return points as coordinates in 2D
     raise NotImplementedError()
 
 
-def garipov_curve_search(model_a, model_b, curve_type='polygon_chain') -> np.ndarray:
+def garipov_curve_search(model_a, model_b, curve_type="polygon_chain") -> np.ndarray:
     """
     We refer by 'Garipov curve search' to the algorithm proposed by Garipov et al (2018) for
     finding low-loss paths between two arbitrary minima in a loss landscape. The core idea
@@ -93,9 +97,9 @@ def garipov_curve_search(model_a, model_b, curve_type='polygon_chain') -> np.nda
     point_b = model_b_wrapper.get_parameter_tensor()
 
     # todo
-    if curve_type == 'polygon_chain':
-        raise NotImplementedError('Not implemented yet.')
-    elif curve_type == 'bezier_curve':
-        raise NotImplementedError('Not implemented yet.')
+    if curve_type == "polygon_chain":
+        raise NotImplementedError("Not implemented yet.")
+    elif curve_type == "bezier_curve":
+        raise NotImplementedError("Not implemented yet.")
     else:
-        raise AttributeError('Curve type is not polygon_chain or bezier_curve.')
+        raise AttributeError("Curve type is not polygon_chain or bezier_curve.")

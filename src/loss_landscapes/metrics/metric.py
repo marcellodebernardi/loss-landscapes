@@ -1,11 +1,12 @@
-""" Base classes for model evaluation metrics. """
+"""Base classes for model evaluation metrics."""
 
 from abc import ABC, abstractmethod
+
 from loss_landscapes.model_interface.model_wrapper import ModelWrapper
 
 
 class Metric(ABC):
-    """ A quantity that can be computed given a model or an agent. """
+    """A quantity that can be computed given a model or an agent."""
 
     def __init__(self):
         super().__init__()
@@ -16,7 +17,7 @@ class Metric(ABC):
 
 
 class MetricPipeline(Metric):
-    """ A sequence of metrics to be computed in order, given a model or an agent. """
+    """A sequence of metrics to be computed in order, given a model or an agent."""
 
     def __init__(self, metrics: list):
         super().__init__()

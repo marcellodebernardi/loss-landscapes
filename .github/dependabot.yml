@@ -1,0 +1,13 @@
+version: 2
+
+updates:
+  # TODO: add a `pip` entry once the follow-up PR takes ownership of dependency versions.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "ci"
+    groups:
+      actions:
+        patterns: ["*"]

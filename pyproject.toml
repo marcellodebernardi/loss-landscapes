@@ -1,0 +1,126 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "loss_landscapes"
+description = "A library for approximating loss landscapes in low-dimensional parameter subspaces"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Marcello De Bernardi", email = "marcello.debernardi@stcatz.ox.ac.uk" },
+]
+dynamic = ["version"]
+
+# TODO: these reproduce the contract published as 3.0.6 and are both wrong -- torch is
+# imported at module load but not declared, and no Python below 3.10 can install a usable
+# torch. Fix with the classifiers below, then drop compare_with_published.py.
+requires-python = ">=3.5"
+dependencies = ["numpy"]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3.5",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+]
+
+[project.urls]
+Homepage = "https://github.com/marcellodebernardi/loss-landscapes"
+Repository = "https://github.com/marcellodebernardi/loss-landscapes"
+Changelog = "https://github.com/marcellodebernardi/loss-landscapes/blob/master/CHANGELOG.md"
+
+[tool.hatch.version]
+source = "vcs"
+
+
+# --- dev environment -------------------------------------------------------
+
+[tool.uv]
+# Required while `requires-python` above claims >=3.5, which nothing can resolve against.
+environments = ["python_version >= '3.10'"]
+
+# On Linux, plain `torch` is the multi-gigabyte CUDA build; the tests are CPU-only.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[dependency-groups]
+dev = [{ include-group = "test" }, { include-group = "lint" }, "pre-commit>=3.5"]
+test = [
+    "pytest>=8",
+    "pytest-cov>=5",
+    "hypothesis>=6",
+    "torch>=2",  # a runtime dependency; see the TODO on [project.dependencies]
+]
+lint = ["ruff>=0.6", "mypy>=1.11"]
+
+
+# --- linting and formatting ------------------------------------------------
+
+[tool.ruff]
+line-length = 120
+# TODO: the example notebook targets a Python 3.6 kernel. Rewrite it, then drop this.
+extend-exclude = ["examples/"]
+# Tracks `requires-python`, so no autofix rewrites the library past what it claims.
+target-version = "py37"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "D",   # pydocstyle
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+# Public API re-exports.
+"src/loss_landscapes/__init__.py" = ["F401"]
+"src/loss_landscapes/metrics/__init__.py" = ["F401"]
+# TODO: the library predates these rules. Remove each exemption as it is brought up to
+# standard: D (reST docstrings), E741 (`l` as a layer index), E501 (one line in a
+# commented-out metric), F841 (unused locals in the dead `contrib`).
+"src/loss_landscapes/**" = ["D"]
+"src/loss_landscapes/model_interface/model_parameters.py" = ["D", "E741"]
+"src/loss_landscapes/metrics/sl_metrics.py" = ["D", "E501"]
+"src/loss_landscapes/contrib/*" = ["D", "E501", "F841"]
+# Test names are the documentation.
+"tests/**" = ["D1"]
+
+
+# --- type checking ---------------------------------------------------------
+
+# TODO: lenient because the annotations have never been checked. Tighten these and add
+# the PEP 561 `py.typed` marker once the package type-checks cleanly.
+[tool.mypy]
+files = ["src"]
+python_version = "3.12"
+ignore_missing_imports = true
+warn_unused_configs = true
+# `contrib` imports a module removed in 2019; see the xfail in tests/test_packaging.py.
+exclude = ["^src/loss_landscapes/contrib/"]
+
+# TODO: `__eq__` is typed as taking ModelParameters rather than object, and the class has
+# `__getitem__`/`__len__` but no `__iter__`. Both need a source change.
+[[tool.mypy.overrides]]
+module = "loss_landscapes.model_interface.model_parameters"
+disable_error_code = ["override", "attr-defined"]
+
+
+# --- tests -----------------------------------------------------------------
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+xfail_strict = true

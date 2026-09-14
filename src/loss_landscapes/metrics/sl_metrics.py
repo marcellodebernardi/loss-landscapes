@@ -6,17 +6,18 @@ computing the loss, the gradient of the loss (w.r.t. model parameters) and Hessi
 (w.r.t. model parameters) for some supervised learning loss is easily accomplished.
 """
 
-
 import numpy as np
 import torch
 import torch.autograd
+
 from loss_landscapes.metrics.metric import Metric
 from loss_landscapes.model_interface.model_parameters import rand_u_like
 from loss_landscapes.model_interface.model_wrapper import ModelWrapper
 
 
 class Loss(Metric):
-    """ Computes a specified loss function over specified input-output pairs. """
+    """Computes a specified loss function over specified input-output pairs."""
+
     def __init__(self, loss_fn, inputs: torch.Tensor, target: torch.Tensor):
         super().__init__()
         self.loss_fn = loss_fn
@@ -28,8 +29,9 @@ class Loss(Metric):
 
 
 class LossGradient(Metric):
-    """ Computes the gradient of a specified loss function w.r.t. the model parameters
-    over specified input-output pairs. """
+    """Computes the gradient of a specified loss function w.r.t. the model parameters
+    over specified input-output pairs."""
+
     def __init__(self, loss_fn, inputs: torch.Tensor, target: torch.Tensor):
         super().__init__()
         self.loss_fn = loss_fn
@@ -44,10 +46,11 @@ class LossGradient(Metric):
 
 
 class LossPerturbations(Metric):
-    """ Computes random perturbations in the loss value along a sample or random directions.
+    """Computes random perturbations in the loss value along a sample or random directions.
     These perturbations can be used to reason probabilistically about the curvature of a
     point on the loss landscape, as demonstrated in the paper by Schuurmans et al
     (https://arxiv.org/abs/1811.11214)."""
+
     def __init__(self, loss_fn, inputs: torch.Tensor, target: torch.Tensor, n_directions, alpha):
         super().__init__()
         self.loss_fn = loss_fn

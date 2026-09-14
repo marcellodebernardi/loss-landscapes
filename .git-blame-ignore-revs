@@ -1,0 +1,9 @@
+# Revisions listed here are pure formatting and are skipped by `git blame`.
+#
+# Enable locally with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# GitHub applies this file automatically in its blame view.
+
+# style: apply ruff formatting and import sorting
+be162c2508fadf7b91d7a52c049974c24a8682b7
