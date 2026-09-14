@@ -7,18 +7,16 @@ name = "loss_landscapes"
 description = "A library for approximating loss landscapes in low-dimensional parameter subspaces"
 readme = "README.md"
 license = "MIT"
-license-files = ["LICENSE.txt"]
+license-files = ["LICENSE"]
 authors = [
     { name = "Marcello De Bernardi", email = "marcello.debernardi@stcatz.ox.ac.uk" },
 ]
 dynamic = ["version"]
 
-# NOTE: `requires-python` and `dependencies` below deliberately reproduce the contract
-# published as loss-landscapes 3.0.6 on PyPI, so that this packaging rewrite is a no-op
-# for consumers. Both are known to be wrong:
-#   * the library imports `torch` at module load, but torch is not declared here;
-#   * Python 3.5-3.7 are long past end of life and cannot install a usable torch.
-# Correcting them is the job of the follow-up PR; see CHANGELOG.md.
+# TODO: both of these reproduce the contract published as 3.0.6, so that the packaging
+# rewrite is a no-op for consumers, and both are wrong: torch is imported at module load
+# but not declared, and no Python below 3.10 can install a usable torch. Fix together with
+# the classifiers below, and drop the compare_with_published.py step from ci.yml.
 requires-python = ">=3.5"
 dependencies = ["numpy"]
 
@@ -36,9 +34,6 @@ Homepage = "https://github.com/marcellodebernardi/loss-landscapes"
 Repository = "https://github.com/marcellodebernardi/loss-landscapes"
 Changelog = "https://github.com/marcellodebernardi/loss-landscapes/blob/master/CHANGELOG.md"
 
-
-# --- build -----------------------------------------------------------------
-
 [tool.hatch.version]
 source = "vcs"
 
@@ -46,21 +41,18 @@ source = "vcs"
 packages = ["src/loss_landscapes"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/loss_landscapes", "tests", "README.md", "LICENSE.txt", "CHANGELOG.md"]
+include = ["src/loss_landscapes", "tests", "README.md", "LICENSE", "CHANGELOG.md"]
 
 
 # --- dev environment -------------------------------------------------------
 
-# The published `requires-python` (>=3.5) describes no environment in which the test
-# suite can actually run, since current torch requires >=3.10. This confines dependency
-# resolution to the versions we really develop and test against, without touching the
-# metadata that ships to PyPI.
 [tool.uv]
+# `requires-python` above describes no environment the test suite can run in. This
+# confines resolution to what we actually develop against, without touching published
+# metadata.
 environments = ["python_version >= '3.10'"]
 
-# On Linux, plain `torch` from PyPI is the CUDA build: several gigabytes, none of which
-# the test suite uses. Pull the CPU wheels there instead so CI stays fast. macOS and
-# Windows resolve from PyPI as usual.
+# On Linux, plain `torch` is the multi-gigabyte CUDA build, none of which the tests use.
 [[tool.uv.index]]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
@@ -70,35 +62,26 @@ explicit = true
 torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
 
 [dependency-groups]
-dev = [
-    { include-group = "test" },
-    { include-group = "lint" },
-    "pre-commit>=3.5",
-]
+dev = [{ include-group = "test" }, { include-group = "lint" }, "pre-commit>=3.5"]
 test = [
     "pytest>=8",
     "pytest-cov>=5",
     "hypothesis>=6",
-    # torch is a true runtime dependency of the library, but is not declared in
-    # [project.dependencies] because the published 3.0.6 release does not declare it.
+    # A real runtime dependency of the library, kept here because 3.0.6 does not declare it.
     "torch>=2",
 ]
-lint = [
-    "ruff>=0.6",
-    "mypy>=1.11",
-]
+lint = ["ruff>=0.6", "mypy>=1.11"]
 
 
 # --- linting and formatting ------------------------------------------------
 
 [tool.ruff]
 line-length = 120
-src = ["src", "tests"]
-# The example notebook is pinned to a Python 3.6 kernel and has not been run since 2019.
-# It is rewritten, not linted, in the follow-up PR.
+# TODO: the example notebook is pinned to a Python 3.6 kernel and has not run since 2019.
+# Rewrite it, then drop this exclusion.
 extend-exclude = ["examples/"]
-# Pinned to the oldest Python the package claims to support, so that no autofix
-# rewrites the library into syntax that contract would not allow.
+# Pinned to the oldest Python the package claims to support, so no autofix rewrites the
+# library into syntax that contract disallows. Revisit with `requires-python`.
 target-version = "py37"
 
 [tool.ruff.lint]
@@ -107,28 +90,34 @@ select = [
     "W",   # pycodestyle warnings
     "F",   # pyflakes
     "I",   # isort
+    "D",   # pydocstyle
 ]
 
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
 [tool.ruff.lint.per-file-ignores]
-# Re-exports for the public API.
+# Public API re-exports.
 "src/loss_landscapes/__init__.py" = ["F401"]
 "src/loss_landscapes/metrics/__init__.py" = ["F401"]
-# `contrib` has been unimportable since 2019 and is dispositioned in the follow-up PR;
-# linting dead code would only produce findings nobody can act on here.
-"src/loss_landscapes/contrib/*" = ["F841", "E501"]
-# The only over-long line is inside a large commented-out block of a metric that was
-# never finished. Removing it is a source change, so it waits for the follow-up PR.
-"src/loss_landscapes/metrics/sl_metrics.py" = ["E501"]
-# `filter_normalize_` uses `l` as a layer index. Renaming it is a source change, which
-# this PR deliberately does not make.
-"src/loss_landscapes/model_interface/model_parameters.py" = ["E741"]
+# TODO: the library predates these rules and this branch does not edit library source.
+# Remove each exemption as the follow-up PR brings the module up to standard.
+#   D    - docstrings are reST-style and often missing; convert to Google style
+#   E741 - `filter_normalize_` uses `l` as a layer index
+#   E501 - one over-long line inside a commented-out, unfinished metric
+#   F841 - unused locals in `contrib`, which has been dead since 2019
+"src/loss_landscapes/**" = ["D"]
+"src/loss_landscapes/model_interface/model_parameters.py" = ["D", "E741"]
+"src/loss_landscapes/metrics/sl_metrics.py" = ["D", "E501"]
+"src/loss_landscapes/contrib/*" = ["D", "E501", "F841"]
+# Test names are the documentation; docstrings are used only where a test needs one.
+"tests/**" = ["D1"]
 
 
 # --- type checking ---------------------------------------------------------
 
-# Deliberately lenient: this PR does not modify the library, and the existing
-# annotations have never been checked. The follow-up PR tightens these settings
-# and adds the PEP 561 `py.typed` marker once the package actually type-checks.
+# TODO: deliberately lenient, because the annotations have never been checked. Tighten
+# these and add the PEP 561 `py.typed` marker once the package type-checks cleanly.
 [tool.mypy]
 files = ["src"]
 python_version = "3.12"
@@ -137,11 +126,9 @@ warn_unused_configs = true
 # `contrib` imports a module removed in 2019; see the xfail in tests/test_packaging.py.
 exclude = ["^src/loss_landscapes/contrib/"]
 
-# Two long-standing issues in ModelParameters, both of which need a source change to fix
-# properly and so belong to the follow-up PR:
-#   * `__eq__` is typed as taking ModelParameters rather than object (violates Liskov);
-#   * the class defines `__getitem__`/`__len__` but no `__iter__`, so it is iterable only
-#     through the legacy sequence protocol, which mypy does not model.
+# TODO: two issues in ModelParameters that need a source change: `__eq__` is typed as
+# taking ModelParameters rather than object, and the class defines `__getitem__`/`__len__`
+# but no `__iter__`, so it is iterable only through the legacy sequence protocol.
 [[tool.mypy.overrides]]
 module = "loss_landscapes.model_interface.model_parameters"
 disable_error_code = ["override", "attr-defined"]

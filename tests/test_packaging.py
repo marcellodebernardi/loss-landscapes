@@ -1,5 +1,4 @@
-"""
-Guards on what the distribution actually contains.
+"""Guards on what the distribution actually contains.
 
 These are cheap, and they are the tests that would have caught the two packaging faults
 this repository shipped for years: a wheel full of modules from long-dead refactors, and
@@ -47,7 +46,8 @@ def test_module_imports(name):
 
 
 def test_package_contains_no_unexpected_top_level_modules():
-    """
+    """The wheel must contain only the four real subpackages.
+
     The published 3.0.6 wheel carried ~60 stale modules from earlier refactors, because it
     was built over a dirty build directory. Fail loudly if that ever comes back.
     """

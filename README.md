@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/marcellodebernardi/loss-landscapes/actions/workflows/ci.yml/badge.svg)](https://github.com/marcellodebernardi/loss-landscapes/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/loss-landscapes.svg)](https://pypi.org/project/loss-landscapes/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.txt)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 `loss-landscapes` is a PyTorch library for approximating neural network loss functions, and other related metrics,
 in low-dimensional subspaces of the model's parameter space. The library makes the production of visualizations
@@ -177,5 +177,5 @@ uv run pre-commit install
 uv run pytest
 ````
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow, and [CHANGELOG.md](CHANGELOG.md)
-for release notes and the list of currently known defects.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow and
+[CHANGELOG.md](CHANGELOG.md) for release notes.

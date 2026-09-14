@@ -1,5 +1,4 @@
-"""
-Linear algebra over ModelParameters.
+"""Linear algebra over ModelParameters.
 
 These are the operations the whole library is built on, and the ones whose repeated
 breakage in 2019 produced the run of "fix broken normalization/step scaling" commits.

@@ -1,6 +1,6 @@
 name: Release
 
-# Publishing is deliberately NOT wired to tag pushes yet.
+# TODO: publishing is deliberately NOT wired to tag pushes yet.
 #
 # The library itself has not been verified against a current torch, and the metadata this
 # repository builds still carries the dependency contract of 3.0.6 (numpy only, no torch,

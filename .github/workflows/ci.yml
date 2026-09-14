@@ -81,8 +81,9 @@ jobs:
       - name: Check distribution metadata
         run: uvx twine check dist/*
 
-      # The packaging rewrite is meant to be invisible to anyone installing the package.
-      # This fails the build if the dependency contract ever drifts from the last release.
+      # TODO: the packaging rewrite is meant to be invisible to anyone installing the
+      # package, and this fails the build if the contract drifts. Drop this step once the
+      # follow-up PR changes the contract deliberately.
       - name: Verify the published dependency contract is unchanged
         run: uv run python scripts/compare_with_published.py --version 3.0.6
 

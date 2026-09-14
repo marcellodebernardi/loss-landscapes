@@ -1,6 +1,4 @@
-"""
-Verify that the package this repository builds still declares the same dependency
-contract as a release already published on PyPI.
+"""Verify that this repository still builds the dependency contract it published.
 
 The packaging rewrite (setup.py -> pyproject.toml/hatchling) is intended to be a no-op
 for consumers: same distribution name, same version, same `Requires-Python`, same
@@ -43,6 +41,15 @@ def _normalise_name(name: str) -> str:
 
 
 def fetch_published_metadata(version: str, workdir: str) -> email.message.Message:
+    """Download the wheel PyPI holds for `version` and return its parsed METADATA.
+
+    Args:
+        version: released version to fetch.
+        workdir: scratch directory the wheel is downloaded into.
+
+    Returns:
+        The parsed METADATA of the published wheel.
+    """
     with urllib.request.urlopen(f"https://pypi.org/pypi/{PACKAGE}/{version}/json") as response:
         release = json.load(response)
 
@@ -73,12 +80,29 @@ def build_current_tree(version: str, workdir: str) -> email.message.Message:
 
 
 def read_wheel_metadata(path: str) -> email.message.Message:
+    """Parse the METADATA file out of the wheel at `path`.
+
+    Args:
+        path: path to a wheel.
+
+    Returns:
+        The parsed METADATA of that wheel.
+    """
     with zipfile.ZipFile(path) as archive:
         name = next(n for n in archive.namelist() if n.endswith(".dist-info/METADATA"))
         return email.parser.Parser().parsestr(archive.read(name).decode("utf-8"))
 
 
 def compare(published: email.message.Message, built: email.message.Message) -> list[str]:
+    """Diff the resolver-visible fields of two metadata blocks.
+
+    Args:
+        published: metadata of the release on PyPI.
+        built: metadata of the wheel built from this tree.
+
+    Returns:
+        One human-readable line per contract field that differs; empty if none do.
+    """
     problems = []
 
     for field in CONTRACT_FIELDS:
@@ -97,6 +121,11 @@ def compare(published: email.message.Message, built: email.message.Message) -> l
 
 
 def main() -> int:
+    """Run the comparison and report.
+
+    Returns:
+        0 if the contract is unchanged, 1 otherwise.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--version", default="3.0.6", help="published version to compare against")
     args = parser.parse_args()

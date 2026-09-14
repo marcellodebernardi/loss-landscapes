@@ -28,14 +28,13 @@ uv run pre-commit run -a       # everything the hooks would run
 ## Tests
 
 `pytest` picks up everything under `tests/`. Tests must run on CPU in seconds: the
-fixtures use a two-layer MLP with fourteen parameters, which is enough to exercise the
-layer-wise and filter-wise code paths.
+fixtures use a two-layer MLP — 23 parameters across four tensors — which is enough to
+exercise the layer-wise and filter-wise code paths.
 
 `xfail_strict` is on, so an `xfail` that starts passing fails the build. This is
-deliberate: the suite currently pins a number of known defects (see the "Known issues"
-section of [CHANGELOG.md](CHANGELOG.md)) with strict `xfail` markers, so fixing one of them
-makes the corresponding test fail until the marker is removed in the same change. When you
-fix a bug, delete its marker.
+deliberate: the suite currently pins a number of known defects with strict `xfail`
+markers, so fixing one of them makes the corresponding test fail until the marker is
+removed in the same change. When you fix a bug, delete its marker.
 
 Every `xfail` carries a `reason` explaining the defect. Keep that up: those markers are the
 project's bug tracker as much as the issue list is.

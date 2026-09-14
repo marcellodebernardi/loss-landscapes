@@ -1,6 +1,6 @@
-"""
-The five public entry points: shape, geometry, and the invariants the 2019 bug-fix
-commits were reaching for.
+"""Tests for the five public entry points.
+
+Covers shape, geometry, and the invariants the 2019 bug-fix commits were reaching for.
 """
 
 import numpy as np
@@ -81,10 +81,11 @@ def test_non_model_argument_is_rejected(metric):
 
 @pytest.mark.parametrize("normalization", NORMALIZATIONS)
 def test_random_line_travels_the_requested_distance(model, metric, normalization):
-    """
-    `distance` is a multiple of the start point's norm: after `steps` steps the model
-    should sit exactly that far from where it started, whatever the normalization.
-    This is the invariant commits 450964d / 9d3cfd3 / 570a1b6 were chasing.
+    """The line must end exactly `distance` from where it started.
+
+    `distance` is a multiple of the start point's norm, and the endpoint should sit that
+    far away whatever the normalization. This is the invariant that commits 450964d,
+    9d3cfd3 and 570a1b6 were chasing.
     """
     before = snapshot(model)
     distance = 0.25
@@ -131,7 +132,8 @@ def test_linear_interpolation_ends_at_the_second_model(model, other_model, metri
 
 
 def test_random_plane_is_centred_on_the_start_point(model, metric):
-    """
+    """The start point should be interior to the sampled plane, not at a corner.
+
     random_plane shifts the model back by half the plane before evaluating, so that the
     original parameters land in the middle of the returned grid.
     """
@@ -148,9 +150,10 @@ def test_random_plane_is_centred_on_the_start_point(model, metric):
 
 @pytest.mark.parametrize("deepcopy_model", [True, False])
 def test_deepcopy_model_controls_whether_the_input_is_mutated(model, metric, deepcopy_model):
-    """
-    With deepcopy_model=False (the default) these functions walk the caller's model
-    through parameter space and leave it wherever the walk ended.
+    """deepcopy_model decides whether the caller's model is left where the walk ended.
+
+    With deepcopy_model=False, the default, these functions walk the caller's own model
+    through parameter space rather than a copy of it.
     """
     before = snapshot(model)
 
@@ -164,9 +167,20 @@ def test_deepcopy_model_controls_whether_the_input_is_mutated(model, metric, dee
 
 
 def _capture_plane_directions(monkeypatch, model, metric, normalization, steps=4):
-    """
-    Grab the two direction vectors random_plane builds. They are mutated in place by the
-    scaling that follows, so the captured references show their final state.
+    """Grab the two direction vectors random_plane builds.
+
+    They are mutated in place by the scaling that follows, so the captured references
+    show their final, scaled state.
+
+    Args:
+        monkeypatch: pytest fixture used to intercept the direction constructors.
+        model: model defining the origin of the plane.
+        metric: metric to evaluate at each grid point.
+        normalization: normalization passed through to random_plane.
+        steps: grid resolution.
+
+    Returns:
+        The two direction vectors, as they stood after random_plane finished.
     """
     import loss_landscapes.main as main
 
