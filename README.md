@@ -1,5 +1,9 @@
 # loss-landscapes
 
+[![CI](https://github.com/marcellodebernardi/loss-landscapes/actions/workflows/ci.yml/badge.svg)](https://github.com/marcellodebernardi/loss-landscapes/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/loss-landscapes.svg)](https://pypi.org/project/loss-landscapes/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.txt)
+
 `loss-landscapes` is a PyTorch library for approximating neural network loss functions, and other related metrics, 
 in low-dimensional subspaces of the model's parameter space. The library makes the production of visualizations
 such as those seen in [Visualizing the Loss Landscape of Neural Nets](https://arxiv.org/abs/1712.09913v3) much
@@ -161,3 +165,16 @@ The package is available on PyPI. Install using `pip install loss-landscapes`. T
 import loss_landscapes
 import loss_landscapes.metrics
 ````
+
+### Development
+
+Development uses [uv](https://docs.astral.sh/uv/):
+
+````bash
+uv sync --all-groups
+uv run pre-commit install
+uv run pytest
+````
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow, and [CHANGELOG.md](CHANGELOG.md)
+for release notes and the list of currently known defects.
