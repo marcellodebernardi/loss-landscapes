@@ -52,12 +52,12 @@ def test_source_tree_contains_no_unexpected_top_level_modules():
     assert found == expected
 
 
+# TODO: repair or delete `contrib`, then drop this marker.
 @pytest.mark.xfail(
     reason="contrib was orphaned by the 2019-07-17 refactor: it imports "
     "loss_landscapes.model_interface.model_interface, which no longer exists, and calls the "
     "removed get_parameter_tensor/set_parameter_tensor API. It only appears to work for users "
-    "of the published wheel because that wheel still contains the deleted module. "
-    "See https://github.com/marcellodebernardi/loss-landscapes/issues/TBD",
+    "of the published wheel because that wheel still contains the deleted module.",
     strict=True,
     raises=ModuleNotFoundError,
 )

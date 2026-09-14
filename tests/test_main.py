@@ -225,11 +225,11 @@ def test_plane_directions_are_orthogonal_without_normalization(monkeypatch, mode
 
 
 @pytest.mark.parametrize("normalization", ["filter", "layer", "model"])
+# TODO: orthogonalise the plane directions after normalizing, then drop this marker.
 @pytest.mark.xfail(
     reason="random_plane makes dir_two orthogonal to dir_one and only then normalizes both, "
     "which rotates them apart again. The plane the grid is sampled on is therefore skewed "
-    "whenever normalization is enabled, which is the default. "
-    "See https://github.com/marcellodebernardi/loss-landscapes/issues/TBD",
+    "whenever normalization is enabled, which is the default.",
     strict=True,
 )
 def test_plane_directions_are_orthogonal_with_normalization(monkeypatch, model, metric, normalization):

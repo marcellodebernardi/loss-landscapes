@@ -120,10 +120,10 @@ def test_layer_normalize_gives_each_layer_the_reference_layer_norm(parameters):
         assert direction.layer_norm(index) == pytest.approx(parameters.layer_norm(index), rel=1e-4)
 
 
+# TODO: fix model_normalize_ to use a norm captured before scaling, then drop this.
 @pytest.mark.xfail(
     reason="model_normalize_ recomputes self.model_norm() inside the loop, so each layer is "
-    "scaled by a different factor and the result does not carry the reference norm. "
-    "See https://github.com/marcellodebernardi/loss-landscapes/issues/TBD",
+    "scaled by a different factor and the result does not carry the reference norm.",
     strict=True,
 )
 def test_model_normalize_gives_the_reference_model_norm(parameters):
@@ -187,11 +187,11 @@ def test_l2_norm_is_the_root_of_the_sum_of_squares(parameters):
     assert parameters.model_norm(2) == pytest.approx(expected, rel=1e-5)
 
 
+# TODO: take absolute values in the `*_norm` methods, then drop this marker.
 @pytest.mark.xfail(
     reason="The `*_norm` methods compute pow(sum(x**order), 1/order) without taking absolute "
     "values, so for odd orders negative parameters cancel out and the result is a signed sum "
-    "rather than a norm. Even orders, including the default of 2, are unaffected. "
-    "See https://github.com/marcellodebernardi/loss-landscapes/issues/TBD",
+    "rather than a norm. Even orders, including the default of 2, are unaffected.",
     strict=True,
 )
 def test_l1_norm_is_the_sum_of_absolute_values(parameters):

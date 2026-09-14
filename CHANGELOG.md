@@ -38,7 +38,7 @@ published 3.0.6 release.
 
 Several long-standing library defects were found while writing the tests. They are pinned
 by strict `xfail` markers rather than fixed, so that this release stays an infrastructure
-change; each marker links to its issue. See the `known-issue` label for the list.
+change. Each marker carries the diagnosis and a `TODO:`; grep the test suite for them.
 
 ## [3.0.6] - 2019-08-30
 

@@ -127,23 +127,23 @@ def test_train_and_eval_propagate_to_every_module(model, other_model):
     assert model.training and other_model.training
 
 
+# TODO: fix ModelWrapper.parameters()/named_parameters(), then drop this marker.
 @pytest.mark.xfail(
     reason="ModelWrapper.parameters()/named_parameters() call itertools.chain on a list of "
     "generators instead of chaining the generators themselves, so they yield generator "
-    "objects rather than parameters. "
-    "See https://github.com/marcellodebernardi/loss-landscapes/issues/TBD",
+    "objects rather than parameters.",
     strict=True,
 )
 def test_wrapper_parameters_yields_tensors(model):
     assert all(isinstance(p, torch.Tensor) for p in wrap_model(model).parameters())
 
 
+# TODO: let LossGradient keep gradients enabled, then drop this marker.
 @pytest.mark.xfail(
     reason="wrap_model() calls requires_grad_(False) on every parameter, so nothing reached "
     "through a wrapper is part of an autograd graph and LossGradient cannot differentiate "
     "at all. This fires before the named_parameters() defect above is even reached, so both "
-    "have to be fixed before LossGradient works. "
-    "See https://github.com/marcellodebernardi/loss-landscapes/issues/TBD",
+    "have to be fixed before LossGradient works.",
     strict=True,
     raises=RuntimeError,
 )
