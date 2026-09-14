@@ -45,25 +45,23 @@ Version numbers come from git tags via `hatch-vcs` — there is no version strin
 Tag a release as `vX.Y.Z` and the build picks it up; between tags the version is a `.devN`
 suffix on the next patch.
 
-The packaging rewrite was intended to leave the published dependency contract untouched.
-CI enforces that:
+While the package still declares the dependency contract of 3.0.6, CI checks that it has
+not drifted:
 
 ```bash
 uv run python scripts/compare_with_published.py --version 3.0.6
 ```
 
-builds the current tree under the published version number and compares the resulting
-`Name`, `Version`, `Requires-Python` and `Requires-Dist` against the wheel on PyPI. If you
-are intentionally changing what the package depends on, update the `--version` argument in
-[ci.yml](.github/workflows/ci.yml) to the release you now want to be compared against, or
-drop the step.
+This builds the current tree under the published version number and compares `Name`,
+`Version`, `Requires-Python` and `Requires-Dist` against the wheel on PyPI. Once the
+contract changes deliberately, delete the script and its step in
+[ci.yml](.github/workflows/ci.yml).
 
 ## Releasing
 
-Releases go out through the `Release` workflow, which uses PyPI Trusted Publishing rather
-than a stored API token. It is currently `workflow_dispatch` only and defaults to TestPyPI;
-see the comment at the top of [release.yml](.github/workflows/release.yml) for what needs to
-change before it publishes to PyPI on a tag.
+Push a `vX.Y.Z` tag. The `Release` workflow builds it and publishes through PyPI Trusted
+Publishing, gated on the `pypi` environment, so no API token is stored in the repository.
+To rehearse, tag a pre-release such as `v3.1.0rc1`.
 
 ## Commit and PR conventions
 

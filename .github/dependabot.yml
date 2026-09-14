@@ -1,9 +1,7 @@
 version: 2
 
 updates:
-  # TODO: actions only for now. The `pip` ecosystem is left out because this repository
-  # still declares the dependency contract of the 3.0.6 release. Add a `pip` entry once
-  # the follow-up PR takes ownership of dependency versions.
+  # TODO: add a `pip` entry once the follow-up PR takes ownership of dependency versions.
   - package-ecosystem: github-actions
     directory: /
     schedule:

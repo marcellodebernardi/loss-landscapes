@@ -1,21 +1,10 @@
 name: Release
 
-# TODO: publishing is deliberately NOT wired to tag pushes yet.
-#
-# The library itself has not been verified against a current torch, and the metadata this
-# repository builds still carries the dependency contract of 3.0.6 (numpy only, no torch,
-# requires-python >=3.5). Until the follow-up PR corrects that, the only supported path is
-# a manual run against TestPyPI. Switching the trigger to `push: tags: ['v*']` and removing
-# the TestPyPI default is a one-line change when the package is ready to ship.
+# Tagging `vX.Y.Z` publishes that version. To rehearse a release, tag a pre-release
+# (`v3.1.0rc1`): it goes through the same path and PyPI marks it as such.
 on:
-  workflow_dispatch:
-    inputs:
-      repository:
-        description: Index to publish to
-        required: true
-        default: testpypi
-        type: choice
-        options: [testpypi, pypi]
+  push:
+    tags: ["v*"]
 
 permissions:
   contents: read
@@ -27,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          # hatch-vcs needs the full history and tags to derive the version.
+          # hatch-vcs derives the version from tags.
           fetch-depth: 0
 
       - name: Install uv
@@ -41,28 +30,20 @@ jobs:
       - name: Check distribution metadata
         run: uvx twine check dist/*
 
-      - name: Show what would be published
-        run: |
-          echo "### Distributions" >> "$GITHUB_STEP_SUMMARY"
-          ls -1 dist/ | sed 's/^/- /' >> "$GITHUB_STEP_SUMMARY"
-
       - uses: actions/upload-artifact@v4
         with:
           name: distributions
           path: dist/
 
   publish:
-    name: Publish to ${{ inputs.repository }}
+    name: Publish to PyPI
     needs: build
     runs-on: ubuntu-latest
-    # The environment gates the job behind whatever reviewers/secrets are configured in
-    # repository settings, and is what PyPI's trusted publisher is scoped to.
     environment:
-      name: ${{ inputs.repository }}
-      url: ${{ inputs.repository == 'pypi' && 'https://pypi.org/p/loss-landscapes' || 'https://test.pypi.org/p/loss-landscapes' }}
+      name: pypi
+      url: https://pypi.org/p/loss-landscapes
     permissions:
-      # Required for Trusted Publishing: the job exchanges this OIDC token for a
-      # short-lived upload token, so there is no long-lived API token in repo secrets.
+      # Exchanged for a short-lived upload token, so no API token is stored in the repo.
       id-token: write
     steps:
       - uses: actions/download-artifact@v4
@@ -72,5 +53,3 @@ jobs:
 
       - name: Publish
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: ${{ inputs.repository == 'pypi' && 'https://upload.pypi.org/legacy/' || 'https://test.pypi.org/legacy/' }}

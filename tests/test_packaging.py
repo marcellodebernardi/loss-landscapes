@@ -1,9 +1,4 @@
-"""Guards on what the distribution actually contains.
-
-These are cheap, and they are the tests that would have caught the two packaging faults
-this repository shipped for years: a wheel full of modules from long-dead refactors, and
-a subpackage that had been unimportable since 2019.
-"""
+"""Guards on the shape of the package: its public API, and which modules import."""
 
 import importlib
 import pkgutil
@@ -48,9 +43,8 @@ def test_module_imports(name):
 def test_source_tree_contains_no_unexpected_top_level_modules():
     """The importable package has exactly the four subpackages we expect.
 
-    This inspects the source tree, not a built artifact: `loss_landscapes.__path__` points
-    at `src/` under the editable install. The equivalent check on the wheel is a step in
-    ci.yml's build job, since it needs a build to inspect.
+    Inspects the source tree rather than a built artifact: under an editable install,
+    `loss_landscapes.__path__` points at `src/`.
     """
     expected = {"main", "metrics", "model_interface", "contrib"}
     found = {module.name for module in pkgutil.iter_modules(loss_landscapes.__path__)}

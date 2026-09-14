@@ -1,6 +1,4 @@
 # Install with: uv run pre-commit install
-#
-# These hooks are the same checks CI runs, so a clean commit is normally a green build.
 default_language_version:
   python: python3.12
 
@@ -36,9 +34,7 @@ repos:
     hooks:
       - id: uv-lock
 
-  # Run mypy out of the project environment rather than mirrors-mypy, which would build a
-  # second virtualenv and download an unpinned torch into it -- gigabytes duplicated, and
-  # free to drift from the version uv.lock pins the tests to.
+  # Run mypy from the project environment so it sees the locked torch and numpy.
   - repo: local
     hooks:
       - id: mypy

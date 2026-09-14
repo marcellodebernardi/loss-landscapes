@@ -13,10 +13,9 @@ authors = [
 ]
 dynamic = ["version"]
 
-# TODO: both of these reproduce the contract published as 3.0.6, so that the packaging
-# rewrite is a no-op for consumers, and both are wrong: torch is imported at module load
-# but not declared, and no Python below 3.10 can install a usable torch. Fix together with
-# the classifiers below, and drop the compare_with_published.py step from ci.yml.
+# TODO: these reproduce the contract published as 3.0.6 and are both wrong -- torch is
+# imported at module load but not declared, and no Python below 3.10 can install a usable
+# torch. Fix with the classifiers below, then drop compare_with_published.py.
 requires-python = ">=3.5"
 dependencies = ["numpy"]
 
@@ -36,27 +35,15 @@ Changelog = "https://github.com/marcellodebernardi/loss-landscapes/blob/master/C
 
 [tool.hatch.version]
 source = "vcs"
-# Without this, an untagged commit builds as e.g. 3.0.7.dev11+g82d3392. That trailing
-# local-version segment is valid PEP 440 but is rejected outright by PyPI and TestPyPI,
-# which would make every dispatch run of release.yml fail at upload.
-raw-options = { local_scheme = "no-local-version" }
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/loss_landscapes"]
-
-[tool.hatch.build.targets.sdist]
-include = ["src/loss_landscapes", "tests", "README.md", "LICENSE", "CHANGELOG.md"]
 
 
 # --- dev environment -------------------------------------------------------
 
 [tool.uv]
-# `requires-python` above describes no environment the test suite can run in. This
-# confines resolution to what we actually develop against, without touching published
-# metadata.
+# Required while `requires-python` above claims >=3.5, which nothing can resolve against.
 environments = ["python_version >= '3.10'"]
 
-# On Linux, plain `torch` is the multi-gigabyte CUDA build, none of which the tests use.
+# On Linux, plain `torch` is the multi-gigabyte CUDA build; the tests are CPU-only.
 [[tool.uv.index]]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
@@ -71,8 +58,7 @@ test = [
     "pytest>=8",
     "pytest-cov>=5",
     "hypothesis>=6",
-    # A real runtime dependency of the library, kept here because 3.0.6 does not declare it.
-    "torch>=2",
+    "torch>=2",  # a runtime dependency; see the TODO on [project.dependencies]
 ]
 lint = ["ruff>=0.6", "mypy>=1.11"]
 
@@ -81,11 +67,9 @@ lint = ["ruff>=0.6", "mypy>=1.11"]
 
 [tool.ruff]
 line-length = 120
-# TODO: the example notebook is pinned to a Python 3.6 kernel and has not run since 2019.
-# Rewrite it, then drop this exclusion.
+# TODO: the example notebook targets a Python 3.6 kernel. Rewrite it, then drop this.
 extend-exclude = ["examples/"]
-# Pinned to the oldest Python the package claims to support, so no autofix rewrites the
-# library into syntax that contract disallows. Revisit with `requires-python`.
+# Tracks `requires-python`, so no autofix rewrites the library past what it claims.
 target-version = "py37"
 
 [tool.ruff.lint]
@@ -104,24 +88,21 @@ convention = "google"
 # Public API re-exports.
 "src/loss_landscapes/__init__.py" = ["F401"]
 "src/loss_landscapes/metrics/__init__.py" = ["F401"]
-# TODO: the library predates these rules and this branch does not edit library source.
-# Remove each exemption as the follow-up PR brings the module up to standard.
-#   D    - docstrings are reST-style and often missing; convert to Google style
-#   E741 - `filter_normalize_` uses `l` as a layer index
-#   E501 - one over-long line inside a commented-out, unfinished metric
-#   F841 - unused locals in `contrib`, which has been dead since 2019
+# TODO: the library predates these rules. Remove each exemption as it is brought up to
+# standard: D (reST docstrings), E741 (`l` as a layer index), E501 (one line in a
+# commented-out metric), F841 (unused locals in the dead `contrib`).
 "src/loss_landscapes/**" = ["D"]
 "src/loss_landscapes/model_interface/model_parameters.py" = ["D", "E741"]
 "src/loss_landscapes/metrics/sl_metrics.py" = ["D", "E501"]
 "src/loss_landscapes/contrib/*" = ["D", "E501", "F841"]
-# Test names are the documentation; docstrings are used only where a test needs one.
+# Test names are the documentation.
 "tests/**" = ["D1"]
 
 
 # --- type checking ---------------------------------------------------------
 
-# TODO: deliberately lenient, because the annotations have never been checked. Tighten
-# these and add the PEP 561 `py.typed` marker once the package type-checks cleanly.
+# TODO: lenient because the annotations have never been checked. Tighten these and add
+# the PEP 561 `py.typed` marker once the package type-checks cleanly.
 [tool.mypy]
 files = ["src"]
 python_version = "3.12"
@@ -130,9 +111,8 @@ warn_unused_configs = true
 # `contrib` imports a module removed in 2019; see the xfail in tests/test_packaging.py.
 exclude = ["^src/loss_landscapes/contrib/"]
 
-# TODO: two issues in ModelParameters that need a source change: `__eq__` is typed as
-# taking ModelParameters rather than object, and the class defines `__getitem__`/`__len__`
-# but no `__iter__`, so it is iterable only through the legacy sequence protocol.
+# TODO: `__eq__` is typed as taking ModelParameters rather than object, and the class has
+# `__getitem__`/`__len__` but no `__iter__`. Both need a source change.
 [[tool.mypy.overrides]]
 module = "loss_landscapes.model_interface.model_parameters"
 disable_error_code = ["override", "attr-defined"]
