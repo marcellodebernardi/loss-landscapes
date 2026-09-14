@@ -13,8 +13,11 @@ This library does not provide plotting facilities, letting the user define how t
 
 > **Status:** after seven years without maintenance, `loss-landscapes` is under active development again. The
 > repository has been modernised and a substantial rewrite is coming, targeting current versions of Python and
-> PyTorch. Expect the API to change. Until then, treat the published release as research tooling rather than
-> production code, and prefer the newest version.
+> PyTorch. Expect the API to change.
+>
+> Don't use the published release. Version 3.0.6 dates from 2019, does not declare its dependency on `torch` so a
+> clean `pip install` produces a package that cannot be imported, and several of its normalisation routines are
+> mathematically wrong in ways that distort the plots it exists to produce. The rewrite is the fix.
 
 
 ## 1. What is a Loss Landscape?
