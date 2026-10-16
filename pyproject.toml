@@ -68,7 +68,8 @@ lint = ["ruff>=0.6", "mypy>=1.11"]
 [tool.ruff]
 line-length = 120
 # TODO: the example notebook targets a Python 3.6 kernel. Rewrite it, then drop this.
-extend-exclude = ["examples/"]
+# Spec Kit scripts are generated upstream and refreshed by its CLI.
+extend-exclude = ["examples/", ".specify/scripts/"]
 # Tracks `requires-python`, so no autofix rewrites the library past what it claims.
 target-version = "py37"
 
