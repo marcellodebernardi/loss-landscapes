@@ -10,7 +10,9 @@ uv run pre-commit install
 ```
 
 That creates a virtual environment in `.venv`, installs the library in editable mode along
-with the test and lint tooling, and wires up the pre-commit hooks.
+with the test and lint tooling, and wires up the pre-commit hooks. Run
+`uv run pre-commit install` separately in each checkout; hooks are not installed by cloning
+the repository or syncing dependencies.
 
 `uv.lock` is committed, so everyone and CI resolve to the same versions. Do not edit it by
 hand — run `uv lock` and commit the result.
@@ -24,6 +26,21 @@ uv run ruff format .           # format
 uv run mypy                    # type-check the package
 uv run pre-commit run -a       # everything the hooks would run
 ```
+
+## Spec-driven development
+
+This project uses Spec Kit for substantive features, API changes, and numerical
+redesigns. Read [.specify/memory/constitution.md](.specify/memory/constitution.md) before
+planning or implementing changes.
+
+Use the installed Spec Kit commands or skills to define the specification,
+clarify requirements, create a plan, generate tasks, analyse their consistency,
+and implement the change. Keep the artifacts under `specs/` aligned with the
+implementation. Small fixes and editorial changes may use an issue or PR
+description instead.
+
+Codex and Claude integrations are available and share the same constitution
+and specification artifacts.
 
 ## Tests
 
