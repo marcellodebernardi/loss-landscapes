@@ -1,0 +1,20 @@
+{
+  "version": "1.2.0",
+  "integration_state_schema": 1,
+  "installed_integrations": [
+    "codex",
+    "claude"
+  ],
+  "integration_settings": {
+    "codex": {
+      "script": "py",
+      "invoke_separator": "-"
+    },
+    "claude": {
+      "script": "py",
+      "invoke_separator": "-"
+    }
+  },
+  "integration": "codex",
+  "default_integration": "codex"
+}
