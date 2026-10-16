@@ -31,7 +31,7 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/marcellodebernardi/loss-landscapes"
 Repository = "https://github.com/marcellodebernardi/loss-landscapes"
-Changelog = "https://github.com/marcellodebernardi/loss-landscapes/blob/master/CHANGELOG.md"
+Changelog = "https://github.com/marcellodebernardi/loss-landscapes/blob/main/CHANGELOG.md"
 
 [tool.hatch.version]
 source = "vcs"
