@@ -7,10 +7,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-10-30
+
 Repository modernisation. **No library code changed**: the package builds from the same
 twelve source modules as before. The dependency contract deliberately changes from
 the published 3.0.6 release: Python 3.11–3.15 and PyTorch 2.15 are now required. Users
-on older versions must upgrade their environment before installing this candidate.
+on older versions must upgrade their environment before installing this release.
 
 ### Added
 
@@ -38,7 +40,7 @@ on older versions must upgrade their environment before installing this candidat
 
 ### Fixed
 
-- PyTorch is now a declared runtime dependency, so a clean candidate installation can import
+- PyTorch is now a declared runtime dependency, so a clean installation can import
   the library without a separate manual dependency install. The obsolete 3.0.6 metadata guard
   has been removed. Known numerical defects remain unchanged and explicitly tracked.
 
@@ -55,8 +57,9 @@ change. Each marker carries the diagnosis and a `TODO:`; grep the test suite for
 
 ## [3.0.6] - 2019-08-30
 
-Last release published to PyPI. No changelog was kept before this file was introduced; see
+No changelog was kept before this file was introduced; see
 the git history for earlier versions.
 
-[Unreleased]: https://github.com/marcellodebernardi/loss-landscapes/compare/v3.0.6...HEAD
+[Unreleased]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.0...HEAD
+[4.0.0]: https://github.com/marcellodebernardi/loss-landscapes/compare/v3.0.6...v4.0.0
 [3.0.6]: https://github.com/marcellodebernardi/loss-landscapes/releases/tag/v3.0.6

@@ -2,9 +2,13 @@
 
 ## Development setup
 
-The project uses [uv](https://docs.astral.sh/uv/). Install it, then:
+Development uses Python 3.12, selected by `.python-version`, and
+[uv](https://docs.astral.sh/uv/). Install uv, then clone and enter the repository
+(use your fork URL when contributing through a fork):
 
 ```bash
+git clone https://github.com/marcellodebernardi/loss-landscapes.git
+cd loss-landscapes
 uv sync --all-groups
 uv run pre-commit install
 ```
@@ -143,9 +147,25 @@ suffix on the next patch.
 
 ## Releasing
 
-Push a `vX.Y.Z` tag. The `Release` workflow builds it and publishes through PyPI Trusted
-Publishing, gated on the `pypi` environment, so no API token is stored in the repository.
-To rehearse, tag a pre-release such as `v3.1.0rc1`.
+Finalise the changelog, merge the release changes, and verify all required CI checks pass
+on the resulting `main` commit. The release workflow builds and checks distribution metadata;
+it does not run the compatibility suite itself.
+
+From a clean checkout, create and push the version tag (replace `X.Y.Z` with the release version):
+
+```bash
+git switch main
+git pull --ff-only origin main
+git tag -a vX.Y.Z -m "Release X.Y.Z"
+git push origin vX.Y.Z
+```
+
+Pushing the tag starts the `Release` workflow. It builds the wheel and source distribution
+and publishes both to PyPI through Trusted Publishing, so no API token is stored in the
+repository. Watch the workflow and approve the `pypi` environment deployment if prompted.
+
+A prerelease tag such as `vX.Y.Zrc1` uses the same workflow and publishes to **real PyPI**,
+where it is marked as a prerelease. It is not a dry run or a TestPyPI upload.
 
 ## Commit and PR conventions
 

@@ -24,7 +24,7 @@ can define the loss landscape as the set of all `n+1`-dimensional points `(param
 above, provides a visual representation of what a loss function over a two-dimensional parameter space might look
 like:
 
-<p align="center"><img src="/img/loss-landscape.png" width="60%" align="middle"/></p>
+<p align="center"><img src="https://raw.githubusercontent.com/marcellodebernardi/loss-landscapes/main/img/loss-landscape.png" width="60%" align="middle"/></p>
 
 Of course, real machine learning models have a number of parameters much greater than 2, so the parameter space of
 the model is virtually never two-dimensional. Because we can't print visualizations in more than two dimensions,
@@ -44,37 +44,49 @@ produce a surface plot alike to the one in section 1.
 This is accomplished as follows:
 
 ````python
+from loss_landscapes import random_plane
+from loss_landscapes.metrics import Loss
+
 metric = Loss(loss_function, X, y)
-landscape = random_plane(model, metric, normalize="filter")
+landscape = random_plane(model, metric, normalization="filter", deepcopy_model=True)
 ````
 
 As seen in the example above, the two core concepts in `loss-landscapes` are _metrics_ and _parameter subspaces_. The
 latter define the section of parameter space to be considered, while the former define what quantity is evaluated at
 each considered point in parameter space, and how it is computed. In the example above, we define a `Loss` metric
-over data `X` and labels `y`, and instruct `loss_landscape` to evaluate it in a randomly generated planar subspace.
+over data `X` and labels `y`, and instruct `random_plane` to evaluate it in a randomly generated planar subspace.
 
 This would return a 2-dimensional array of loss values, which the user can plot in any desirable way. Example
 visualizations the user might use this type of data for are shown below.
 
-<p align="center"><img src="/img/loss-contour.png" width="75%" align="middle"/></p>
+<p align="center"><img src="https://raw.githubusercontent.com/marcellodebernardi/loss-landscapes/main/img/loss-contour.png" width="75%" align="middle"/></p>
 
-<p align="center"><img src="/img/loss-contour-3d.png" width="75%" align="middle"/></p>
+<p align="center"><img src="https://raw.githubusercontent.com/marcellodebernardi/loss-landscapes/main/img/loss-contour-3d.png" width="75%" align="middle"/></p>
 
-Check the `examples` directory for `jupyter` notebooks with more in-depth examples of what is possible.
+Sampling modifies the supplied model's parameters and disables its parameter gradients by default.
+Use `deepcopy_model=True`, as above, to evaluate a copy and preserve the supplied model.
+See [the core-features notebook](examples/core-features.ipynb) for a training and plotting example.
+It additionally uses `torchvision`, `matplotlib` and `tqdm`; install these separately.
 
 
 ## 3. Metrics and Custom Metrics
 The `loss-landscapes` library can compute any quantity of interest at a collection of points in a parameter subspace,
 not just loss. This is accomplished using a `Metric`: a callable object which applies a pre-determined function,
-such as a cross entropy loss with a specific set of inputs and outputs, to the model. The `loss_landscapes.model_metrics`
-package contains a number of metrics that cover common use cases, such as `Loss` (evaluates a loss
-function), `LossGradient` (evaluates the gradient of the loss w.r.t. the model parameters),
-`PrincipalCurvatureEvaluator` (evaluates the principal curvatures of the loss function), and more.
+such as a cross entropy loss with a specific set of inputs and outputs, to the model. The `loss_landscapes.metrics`
+package provides `Loss`, `LossPerturbations` and `MetricPipeline`. `LossGradient` is also exported,
+but currently has the defects noted above.
 
 Furthermore, the user can add custom metrics by subclassing `Metric`. As an example, consider the library
 implementation of `Loss`, for `torch` models:
 
 ````python
+import abc
+
+import torch
+
+from loss_landscapes import ModelWrapper
+
+
 class Metric(abc.ABC):
     """A quantity that can be computed given a model or an agent."""
 
@@ -99,18 +111,10 @@ class Loss(Metric):
         return self.loss_fn(model_wrapper.forward(self.inputs), self.target).item()
 ````
 
-The user may create custom `Metric`s in a similar manner. One complication is that the `Metric` class'
-`__call__` method is designed to take as input a `ModelWrapper` rather than a model. This class is internal
-to the library and exists to facilitate the handling of the myriad of different models a user may pass as
-inputs to a function such as `loss_landscapes.planar_interpolation()`. It is sufficient for the user to know
-that a `ModelWrapper` is a callable object that can be used to call the model on a given input (see the `call_fn`
-argument of the `ModelInterface` class in the next section). The class also provides a `get_model()` method
-that exposes a reference to the underlying model, should the user wish to carry out more complicated operations
-on it.
-
-In summary, the `Metric` abstraction adds a great degree of flexibility. An metric defines what quantity
-dependent on model parameters the user is interested in evaluating, and how to evaluate it. The user could define,
-for example, a metric that computes an estimate of the expected return of a reinforcement learning agent.
+Custom metrics receive a `ModelWrapper`. Call `model_wrapper.forward(inputs)` to evaluate
+the wrapped model and `model_wrapper.get_modules()` to access the selected PyTorch modules.
+A `GeneralModelWrapper` also exposes the underlying model through its `model` attribute.
+The wrapper itself is not callable.
 
 
 ## 4. More Complex Models
@@ -123,19 +127,27 @@ library how to interface with the model (or the agent, on a more general level).
 `ModelWrapper` object, which hides the implementation details of the model or agent. For general use, the library
 supplies the `GeneralModelWrapper` in the `loss_landscapes.model_interface.model_wrapper` module.
 
-Assume the user wishes to estimate the expected return of some RL agent which provides an `agent.act(observation)`
-method for action selection. Then, the example from section 2 becomes as follows:
+For example, to vary only the final module of a `torch.nn.Sequential` model while evaluating
+the complete model, reuse the loss metric from the supervised example:
 
-````python
-metric = ExpectedReturnMetric(env, n_samples)
-agent_wrapper = GeneralModelWrapper(agent, [agent.q_function, agent.policy], lambda agent, x: agent.act(x))
-landscape = random_plane(agent_wrapper, metric, normalize="filter")
-````
+```python
+from loss_landscapes import GeneralModelWrapper
+
+model_wrapper = GeneralModelWrapper(
+    model=model,
+    modules=[model[-1]],
+    forward_fn=lambda model, inputs: model(inputs),
+)
+landscape = random_plane(model_wrapper, metric, normalization="filter", deepcopy_model=True)
+```
+
+`modules` selects the parameters to vary; the forward function defines how the complete model
+is evaluated. This example assumes the final module has parameters to sample.
 
 
 ## 5. Installation and Use
 
-The build targets the following combinations:
+The library supports the following combinations:
 
 | PyTorch minor series | CPython minor versions |
 | --- | --- |
@@ -145,14 +157,13 @@ Compatibility is tested on Linux x86-64 CPU with standard, GIL-enabled CPython, 
 compatible stable patches in these series. GPU execution, free-threaded builds and alternative
 interpreters are not covered by these checks.
 
-Install this checkout from the repository root:
+Install from [PyPI](https://pypi.org/project/loss-landscapes/):
 
 ```bash
-python -m pip install .
+python -m pip install loss-landscapes
 ```
 
-This installs NumPy and PyTorch automatically. The published PyPI version, 3.0.6, does not declare
-PyTorch as a dependency; use the checkout installation above for the support matrix listed here.
+This installs NumPy and PyTorch automatically. Import the library as follows:
 
 ```python
 import loss_landscapes
@@ -163,13 +174,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for compatibility checks and platform pre
 
 ### Development
 
-Development uses [uv](https://docs.astral.sh/uv/):
-
-````bash
-uv sync --all-groups
-uv run pre-commit install
-uv run pytest
-````
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow and
+See [CONTRIBUTING.md](CONTRIBUTING.md) for checkout setup, tests and release instructions, and
 [CHANGELOG.md](CHANGELOG.md) for release notes.
