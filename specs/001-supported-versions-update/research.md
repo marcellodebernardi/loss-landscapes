@@ -67,7 +67,7 @@ manually installing PyTorch into a shared development environment compromises is
 ## 4. Latest patches versus exact replay
 
 **Decision:** Provision test interpreters separately under `.tox/python`. Routine runs use current
-uv and `uv run --no-sync uv python install --install-dir .tox/python --upgrade --no-bin --no-registry` for the requested
+uv and `uvx uv@latest python install --install-dir .tox/python --upgrade --no-bin --no-registry` for the requested
 minors. Configure the directory and interpreter selection in tox/tox-uv rather than requiring manual
 shell exports; verify those settings reach environment creation. This avoids replacing development executables or registering
 them globally. Disable automatic interpreter downloads during tox execution so missing prerequisites

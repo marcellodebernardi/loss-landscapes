@@ -48,7 +48,7 @@ jobs:
           matrix=$(uv run --no-sync tox list -d --no-desc | python -c 'import json,sys; print(json.dumps({"include": [{"environment": n, "python": "3." + n.split("-")[0][3:]} for n in sys.stdin.read().split()]}))')
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
       - name: Provision stable source-install interpreter
-        run: uv run --no-sync uv python install --install-dir .tox/python --upgrade --no-bin --no-registry 3.12
+        run: uvx uv@latest python install --install-dir .tox/python --upgrade --no-bin --no-registry 3.12
       - name: Build candidate distributions
         run: |
           uv build
@@ -93,7 +93,7 @@ jobs:
       - name: Install locked compatibility driver
         run: uv sync --locked --only-group compatibility --no-install-project
       - name: Provision stable managed interpreters
-        run: uv run --no-sync uv python install --install-dir .tox/python --upgrade --no-bin --no-registry ${{ matrix.python }} 3.12
+        run: uvx uv@latest python install --install-dir .tox/python --upgrade --no-bin --no-registry ${{ matrix.python }} 3.12
       - uses: actions/download-artifact@v8
         with:
           name: distributions

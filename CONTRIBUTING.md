@@ -67,14 +67,15 @@ are outside this support claim. Existing numerical defects remain tracked by str
 After development setup, provision the latest stable interpreter patches in a test-only directory:
 
 ```bash
-uv run --no-sync uv python install --install-dir .tox/python --upgrade --no-bin --no-registry 3.11 3.12 3.13 3.14 3.15
+uvx uv@latest python install --install-dir .tox/python --upgrade --no-bin --no-registry 3.11 3.12 3.13 3.14 3.15
 uv run --no-sync tox list -d --no-desc
 uv run --no-sync tox run -r -e py312-torch215 --result-json .tox/result.json
 uv run --no-sync tox run -r --result-json .tox/result.json
 ```
 
 For one combination, provision its Python minor and 3.12 (the shared build interpreter).
-Use current uv: older interpreter catalogs may select stale patches or prereleases. No shell
+`uvx uv@latest` resolves current stable uv independently of the driver lock; older
+interpreter catalogs may select stale patches or prereleases. No shell
 exports are required. These commands leave `.venv`, `.python-version` and `uv.lock` alone;
 missing interpreters fail rather than silently reducing coverage. Downloads require network
 access; allow disk space for separate PyTorch installations. macOS requires Apple Silicon

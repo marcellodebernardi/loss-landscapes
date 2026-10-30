@@ -30,7 +30,7 @@ individual test environments do not.
 Provision the latest available patches into the test-only directory:
 
 ```bash
-uv run --no-sync uv python install --install-dir .tox/python --upgrade --no-bin --no-registry 3.11 3.12 3.13 3.14 3.15
+uvx uv@latest python install --install-dir .tox/python --upgrade --no-bin --no-registry 3.11 3.12 3.13 3.14 3.15
 ```
 
 To test only one combination, provision its minor and 3.12 for shared packaging. The command works without shell environment
@@ -143,7 +143,8 @@ validation; record complete Linux evidence for the candidate and leave publishin
   contains exactly five environments. Missing managed Python failed with exit 2 and downloads
   disabled. After provisioning, `py312-torch215 --notest` succeeded using managed CPython
   3.12.16, independently resolving torch 2.15.0 and NumPy 2.5.4 (development lock: NumPy 2.5.3).
-  Use the project-installed uv for provisioning; the older system uv 0.12.9 selected a prerelease.
+  The older system uv 0.12.9 selected a prerelease; provisioning now uses `uvx uv@latest`
+  so its interpreter catalog cannot be frozen by the driver lock.
 
 - Initial native wheel matrix: all five environments passed (83 passed, 9 xfailed each),
   using CPython 3.11.18/3.12.16/3.13.18/3.14.10/3.15.2, torch 2.15.0,
@@ -175,3 +176,14 @@ validation; record complete Linux evidence for the candidate and leave publishin
   with 94 passed and 9 xfailed; no ordinary skips. Development dependency listing and
   SHA256 of `uv.lock`/`.python-version` matched before/after matrix selection and replay.
   All pre-commit hooks passed, including gitleaks, Ruff, lock consistency and mypy.
+
+- Linux failure probe at `74750ae`, [Actions run 41102152153](https://github.com/marcellodebernardi/loss-landscapes/actions/runs/41102152153):
+  uploaded tox results show exit 1 only for `py311-torch215`; the other four environments
+  and sdist report exit 0. JUnit identifies exactly the temporary probe failure, with the
+  same nine xfails. All six diagnostic artifacts and the original distributions were retained.
+  The probe is removed from the acceptance candidate. At inspection, GitHub's check status
+  API still reported pending; a completed workflow result is required for final acceptance.
+- Interpreter provisioning uses `uvx uv@latest` so future stable Python patches are discovered
+  independently of locked tox driver tooling. This command verified all five managed versions
+  were current. Main's Dependabot update was merged; regeneration resolves virtualenv 21.15.1
+  and python-discovery 1.6.7 rather than retaining the older 21.7.9 lock.
