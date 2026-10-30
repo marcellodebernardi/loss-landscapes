@@ -133,7 +133,7 @@ expanding its scope.
 
 - [X] T022 [P] Add the support/dependency-contract change, installation fix, compatibility workflow and unchanged numerical limitations to `CHANGELOG.md`; explain migration from the obsolete Python/PyTorch declarations without selecting a final release number or publishing anything.
 - [ ] T023 Re-run the end-to-end scenarios in `specs/001-supported-versions-update/quickstart.md` after final changes, confirming all five Linux wheel checks, actual sdist installation, clean automatic dependency installation, strict expected-failure behaviour and normal reports; compare `README.md`, `CONTRIBUTING.md`, `pyproject.toml` and `.github/workflows/ci.yml` for one consistent policy and record final evidence.
-- [ ] T024 Run applicable Ruff, formatting, mypy, build/metadata and pre-commit checks from `pyproject.toml`/`.pre-commit-config.yaml`; confirm `git diff 00abb16 -- src/loss_landscapes` and changes to `.github/workflows/release.yml` are empty, `.python-version` remains unchanged, and no `.tox/` outputs are staged. Review task completion against `specs/001-supported-versions-update/spec.md` before declaring implementation complete.
+- [X] T024 Run applicable Ruff, formatting, mypy, build/metadata and pre-commit checks from `pyproject.toml`/`.pre-commit-config.yaml`; confirm `git diff 00abb16 -- src/loss_landscapes` and changes to `.github/workflows/release.yml` are empty, `.python-version` remains unchanged, and no `.tox/` outputs are staged. Review task completion against `specs/001-supported-versions-update/spec.md` before declaring implementation complete.
 
 ---
 
@@ -237,3 +237,12 @@ T012/T015/T019; SC-004 by T017/T020; SC-005 by T023.
 - A missing dependency distribution or interpreter is evidence of incomplete verification, not an
   invitation to silently omit a supported combination.
 - Maintainer GitHub configuration is a documented handoff, not a task for a repository policy script.
+
+
+## Acceptance status
+
+Implementation and local validation are complete. T016 and T023 remain unchecked because GitHub's
+run/check API still reports queued for the probe and clean-candidate runs, even though their
+uploaded tox/JUnit results are complete. Probe evidence and clean Linux results are recorded in
+quickstart.md. Confirm completed failing/successful workflow statuses before marking these tasks
+complete; do not treat uploaded reports alone as fulfilled required-check acceptance.

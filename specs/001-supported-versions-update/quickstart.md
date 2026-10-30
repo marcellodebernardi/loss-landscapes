@@ -187,3 +187,14 @@ validation; record complete Linux evidence for the candidate and leave publishin
   independently of locked tox driver tooling. This command verified all five managed versions
   were current. Main's Dependabot update was merged; regeneration resolves virtualenv 21.15.1
   and python-discovery 1.6.7 rather than retaining the older 21.7.9 lock.
+
+- Clean Linux candidate `e20dc32`, [Actions run 41102799587](https://github.com/marcellodebernardi/loss-landscapes/actions/runs/41102799587):
+  uploaded native tox result JSON reports success/exit 0 for all five wheel environments and
+  the actual sdist installation. Each JUnit report has 103 tests, zero failures/errors, and
+  exactly nine known xfails (94 passed). Diagnostics and original distributions are retained.
+  GitHub's run/check status remains queued despite these completed reports, including through
+  an independent connector read. T016/T023 remain open pending completed workflow/check status.
+- Final local checks after merging main and removing the probe: 94 passed, 9 xfailed;
+  mypy, all pre-commit hooks and wheel/sdist metadata checks passed. Library source still
+  matches `00abb16`; release workflow and `.python-version` are unchanged; no `.tox/` outputs
+  are tracked. Only documentation/task status changed after the clean candidate above.
