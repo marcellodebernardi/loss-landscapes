@@ -4,6 +4,9 @@
 [![PyPI](https://img.shields.io/pypi/v/loss-landscapes.svg)](https://pypi.org/project/loss-landscapes/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+> **Project status:** Originally developed in 2019, this project is now back in active development.
+> Significant changes to the API and implementation are coming soon.
+
 `loss-landscapes` is a PyTorch library for approximating neural network loss functions, and other related metrics,
 in low-dimensional subspaces of the model's parameter space. The library makes the production of visualizations
 such as those seen in [Visualizing the Loss Landscape of Neural Nets](https://arxiv.org/abs/1712.09913v3) much
@@ -15,33 +18,56 @@ This library does not provide plotting facilities, letting the user define how t
 > has known defects, and the `contrib` modules cannot be imported. See the strict `xfail` tests
 > for details before relying on affected functionality.
 
+## Quickstart
+
+Install from [PyPI](https://pypi.org/project/loss-landscapes/):
+
+```bash
+python -m pip install loss-landscapes
+```
+
+The following example evaluates loss along the line between two small models. It uses untrained
+models and synthetic data so you can run it immediately; replace them with your checkpoints and
+evaluation data for your own experiments.
+
+```python
+import torch
+
+from loss_landscapes import linear_interpolation
+from loss_landscapes.metrics import Loss
+
+torch.manual_seed(0)
+model = torch.nn.Sequential(torch.nn.Linear(2, 4), torch.nn.Tanh(), torch.nn.Linear(4, 1))
+other_model = torch.nn.Sequential(torch.nn.Linear(2, 4), torch.nn.Tanh(), torch.nn.Linear(4, 1))
+inputs = torch.randn(16, 2)
+targets = inputs.sum(dim=1, keepdim=True)
+metric = Loss(torch.nn.MSELoss(), inputs, targets)
+
+loss_values = linear_interpolation(model, other_model, metric, steps=20, deepcopy_model=True)
+print(loss_values.shape)  # (20,)
+```
+
+Sampling modifies the supplied model's parameters and disables its parameter gradients by default.
+Use `deepcopy_model=True`, as above, to evaluate a copy and preserve the supplied model.
 
 ## 1. What is a Loss Landscape?
-Let `L : Parameters -> Real Numbers` be a loss function, which maps a point in the model parameter space to a
-real number. For a neural network with `n` parameters, the loss function `L` takes an `n`-dimensional input. We
-can define the loss landscape as the set of all `n+1`-dimensional points `(param, L(param))`, for all points
-`param` in the parameter space. For example, the image below, reproduced from the paper by Li et al (2018), link
-above, provides a visual representation of what a loss function over a two-dimensional parameter space might look
-like:
+
+For a neural network with `n` parameters, let `L : R^n -> R` map its parameter vector to a loss
+value. The loss landscape is the graph of this function: the set of points `(θ, L(θ))` in
+`R^(n+1)`, for all parameter vectors `θ`.
+
+Since the full parameter space is too high-dimensional to visualise, the loss is usually evaluated
+on one- or two-dimensional subspaces. The figure below, reproduced from Li et al., illustrates a
+loss function over a two-dimensional parameter space. See
+[Visualizing the Loss Landscape of Neural Nets](https://arxiv.org/abs/1712.09913v3) for the
+visualisation methods that inspired this library.
 
 <p align="center"><img src="https://raw.githubusercontent.com/marcellodebernardi/loss-landscapes/main/img/loss-landscape.png" width="60%" align="middle"/></p>
 
-Of course, real machine learning models have a number of parameters much greater than 2, so the parameter space of
-the model is virtually never two-dimensional. Because we can't print visualizations in more than two dimensions,
-we cannot hope to visualize the "true" shape of the loss landscape. Instead, a number of techniques
-exist for reducing the parameter space to one or two dimensions, ranging from dimensionality reduction techniques
-like PCA, to restricting ourselves to a particular subspace of the overall parameter space. For more details,
-read Li et al's paper.
-
-
 ## 2. Base Example: Supervised Loss in Parameter Subspaces
-The simplest use case for `loss-landscapes` is to estimate the value of a supervised loss function in a subspace
-of a neural network's parameter space. The subspace in question may be a point, a line, or a plane (these subspaces
-can be meaningfully visualized). Suppose the user has trained a supervised learning model, of type `torch.nn.Module`,
-on a dataset consisting of samples `X` and labels `y`, by minimizing some loss function. The user now wishes to
-produce a surface plot alike to the one in section 1.
-
-This is accomplished as follows:
+A common use case is to evaluate a supervised loss function in a low-dimensional subspace of a
+neural network's parameter space. Given a trained `torch.nn.Module` named `model`, a loss function
+`loss_function`, inputs `X` and targets `y`, the following evaluates the loss on a random plane:
 
 ````python
 from loss_landscapes import random_plane
@@ -51,20 +77,15 @@ metric = Loss(loss_function, X, y)
 landscape = random_plane(model, metric, normalization="filter", deepcopy_model=True)
 ````
 
-As seen in the example above, the two core concepts in `loss-landscapes` are _metrics_ and _parameter subspaces_. The
-latter define the section of parameter space to be considered, while the former define what quantity is evaluated at
-each considered point in parameter space, and how it is computed. In the example above, we define a `Loss` metric
-over data `X` and labels `y`, and instruct `random_plane` to evaluate it in a randomly generated planar subspace.
-
-This would return a 2-dimensional array of loss values, which the user can plot in any desirable way. Example
-visualizations the user might use this type of data for are shown below.
+The two core concepts are _metrics_ and _parameter subspaces_. The subspace defines the parameter
+vectors at which to evaluate the model; the metric defines the quantity to compute at each vector.
+Here, `Loss` evaluates the supervised loss over `X` and `y`, and `random_plane` returns a
+two-dimensional array of its values. This array can be plotted as a contour map or a surface:
 
 <p align="center"><img src="https://raw.githubusercontent.com/marcellodebernardi/loss-landscapes/main/img/loss-contour.png" width="75%" align="middle"/></p>
 
 <p align="center"><img src="https://raw.githubusercontent.com/marcellodebernardi/loss-landscapes/main/img/loss-contour-3d.png" width="75%" align="middle"/></p>
 
-Sampling modifies the supplied model's parameters and disables its parameter gradients by default.
-Use `deepcopy_model=True`, as above, to evaluate a copy and preserve the supplied model.
 See [the core-features notebook](examples/core-features.ipynb) for a training and plotting example.
 It additionally uses `torchvision`, `matplotlib` and `tqdm`; install these separately.
 
@@ -76,26 +97,14 @@ such as a cross entropy loss with a specific set of inputs and outputs, to the m
 package provides `Loss`, `LossPerturbations` and `MetricPipeline`. `LossGradient` is also exported,
 but currently has the defects noted above.
 
-Furthermore, the user can add custom metrics by subclassing `Metric`. As an example, consider the library
-implementation of `Loss`, for `torch` models:
+Custom metrics can be defined by subclassing `Metric` and implementing `__call__`. The library
+implementation of `Loss` illustrates this contract:
 
 ````python
-import abc
-
 import torch
 
 from loss_landscapes import ModelWrapper
-
-
-class Metric(abc.ABC):
-    """A quantity that can be computed given a model or an agent."""
-
-    def __init__(self):
-        super().__init__()
-
-    @abc.abstractmethod
-    def __call__(self, model_wrapper: ModelWrapper):
-        pass
+from loss_landscapes.metrics import Metric
 
 
 class Loss(Metric):
@@ -118,14 +127,12 @@ The wrapper itself is not callable.
 
 
 ## 4. More Complex Models
-In the general case of a simple supervised learning model, as in the sections above, client code calls functions
-such as `loss_landscapes.linear_interpolation` and passes as argument a PyTorch module of type `torch.nn.Module`.
+For a simple supervised model, functions such as `linear_interpolation` accept a `torch.nn.Module`
+directly. More complex cases, such as evaluating a subset of a model's parameters or an RL agent's
+expected return, require an explicit interface between the model and the library.
 
-For more complex cases, such as when the user wants to evaluate the loss landscape as a function of a subset of
-the model parameters, or the expected return landscape for a RL agent, the user must specify to the `loss-landscapes`
-library how to interface with the model (or the agent, on a more general level). This is accomplished using a
-`ModelWrapper` object, which hides the implementation details of the model or agent. For general use, the library
-supplies the `GeneralModelWrapper` in the `loss_landscapes.model_interface.model_wrapper` module.
+`ModelWrapper` defines this interface. The supplied `GeneralModelWrapper` accepts the model,
+the modules whose parameters define the subspace, and a function for forward evaluation.
 
 For example, to vary only the final module of a `torch.nn.Sequential` model while evaluating
 the complete model, reuse the loss metric from the supervised example:
@@ -145,7 +152,7 @@ landscape = random_plane(model_wrapper, metric, normalization="filter", deepcopy
 is evaluated. This example assumes the final module has parameters to sample.
 
 
-## 5. Installation and Use
+## 5. Supported Environments
 
 The library supports the following combinations:
 
@@ -156,19 +163,6 @@ The library supports the following combinations:
 Compatibility is tested on Linux x86-64 CPU with standard, GIL-enabled CPython, using the latest
 compatible stable patches in these series. GPU execution, free-threaded builds and alternative
 interpreters are not covered by these checks.
-
-Install from [PyPI](https://pypi.org/project/loss-landscapes/):
-
-```bash
-python -m pip install loss-landscapes
-```
-
-This installs NumPy and PyTorch automatically. Import the library as follows:
-
-```python
-import loss_landscapes
-import loss_landscapes.metrics
-```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for compatibility checks and platform prerequisites.
 
