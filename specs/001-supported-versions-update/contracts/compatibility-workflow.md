@@ -1,7 +1,7 @@
 # Contract: Compatibility Workflow
 
 This extends contributor tooling and package installation contracts. No new public library API is added.
-Commands below describe the implementation to be delivered, not tools already configured on this branch.
+Commands below describe the implemented contributor workflow.
 
 ## Package installation
 
@@ -59,7 +59,8 @@ all five successful Linux CI checks establish official compatibility.
 ## Diagnostic replay
 
 Reproduce a failure using the original wheel, matching platform, exact interpreter and dependency
-constraints derived from the recorded installed-dependency listing. Use tox's native `base_python`
+constraints derived from the recorded installed-dependency listing. The exercised native
+override command and tox-uv exact-interpreter limitation are documented in the quickstart. Use tox's native `base_python`
 and `constraints` overrides; exclude the candidate's local artifact reference from dependency
 constraints because the wheel is supplied explicitly. These overrides and logs already distinguish
 an exact-version run from a routine latest-patch run. No project-specific mode flag, replay service,

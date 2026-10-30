@@ -1,7 +1,7 @@
 # Quickstart: Validate Supported-Version Compatibility
 
-These are the intended validation commands after implementation, not claims that the tooling has
-already been added or the matrix has passed. Run from the repository root. See
+Run from the repository root. Validation evidence is recorded at the end; native results
+do not establish Linux certification. See
 [the workflow contract](contracts/compatibility-workflow.md) for outcome and replay rules.
 
 ## Prerequisites
@@ -30,10 +30,10 @@ individual test environments do not.
 Provision the latest available patches into the test-only directory:
 
 ```bash
-uv python install --install-dir .tox/python --upgrade --no-bin --no-registry 3.11 3.12 3.13 3.14 3.15
+uv run --no-sync uv python install --install-dir .tox/python --upgrade --no-bin --no-registry 3.11 3.12 3.13 3.14 3.15
 ```
 
-To test only one combination, provision only its minor. The command works without shell environment
+To test only one combination, provision its minor and 3.12 for shared packaging. The command works without shell environment
 exports; tox/tox-uv configuration must select the same directory for interpreter discovery and handle
 its download policy internally. These settings need validation during implementation, including on
 native developer platforms. Provisioning must not replace global executables, register interpreters,
@@ -98,9 +98,12 @@ excluding the candidate's local wheel reference. Use native tox overrides for th
 For example, with actual absolute paths substituted:
 
 ```text
-uv run --no-sync tox run -r -e py311-torch215 --installpkg PATH_TO_ORIGINAL_WHEEL -x env.py311-torch215.base_python=PATH_TO_EXACT_PYTHON -x env_run_base.constraints=PATH_TO_RECORDED_CONSTRAINTS
+uv run --no-sync tox run -r -e diagnostic --installpkg PATH_TO_ORIGINAL_WHEEL -x env_list=diagnostic -x tool.tox.env.diagnostic.base_python=PATH_TO_EXACT_PYTHON -x tool.tox.env_run_base.constraints=PATH_TO_RECORDED_CONSTRAINTS
 ```
 
+The temporary `diagnostic` environment uses standard tox overrides: tox-uv 1.37.2
+discards patch versions and exact paths for Python-named environments, so replay must
+use a name without a Python factor. The default five-environment matrix is unchanged.
 No custom replay flag or report format is needed. The exact interpreter and dependency overrides
 are explicit in the tox command. Validate them against the pinned tox/tox-uv versions before delivery.
 Confirm the actual installed versions match the recorded run, report unavailable historical artifacts,
@@ -129,3 +132,46 @@ Remove the controlled failure before acceptance.
 The maintainer configures the required checks listed in the contract through GitHub rulesets/branch
 protection. No repository script edits these settings. Do not publish/tag a release as part of this
 validation; record complete Linux evidence for the candidate and leave publishing to follow-up work.
+
+## Implementation validation record
+
+- Baseline at `0fb0267`, native macOS arm64: CPython 3.12.14, PyTorch 2.14.0,
+  NumPy 2.5.3, pytest 9.1.1. Existing suite: 81 passed, 9 strict xfails, no ordinary skips
+  (90 collected). Library source matched `00abb16`; `.python-version` remained 3.12.
+
+- Foundational proof: tox 4.67.4, tox-uv 1.37.2, bundled uv 0.13.6. Default list
+  contains exactly five environments. Missing managed Python failed with exit 2 and downloads
+  disabled. After provisioning, `py312-torch215 --notest` succeeded using managed CPython
+  3.12.16, independently resolving torch 2.15.0 and NumPy 2.5.4 (development lock: NumPy 2.5.3).
+  Use the project-installed uv for provisioning; the older system uv 0.12.9 selected a prerelease.
+
+- Initial native wheel matrix: all five environments passed (83 passed, 9 xfailed each),
+  using CPython 3.11.18/3.12.16/3.13.18/3.14.10/3.15.2, torch 2.15.0,
+  and independently resolved NumPy (2.4.6 on 3.11; 2.5.4 on the others).
+  Source archive on 3.12.16: 83 passed, 9 xfailed. No ordinary skips.
+- Candidate `loss_landscapes-3.0.7.dev22+g0fb026720.d20261030`: wheel SHA256
+  `95848673cf41c4d975e6101f3c4862a067819b24fc347008903c97ecb5982d52`;
+  sdist SHA256 `8ab49dccb053c2fde7878b3d3d44a3ecc853cbc890f7434d08005a50802b91ca`.
+  Twine accepted both; Name/Version/Requires-Python/Requires-Dist match. Normal resolver
+  rejected a torch<2.15 constraint and a Python 3.16 target. Runtime dependencies were
+  installed by the candidate metadata, not the test group. Source diff remained empty.
+- Outcome-policy tests were red before the option/hooks existed, then passed after implementation.
+  Collection-only skips preserve pytest's existing exit 5; other ordinary skips produce exit 1.
+  XFAIL succeeds, strict XPASS and ordinary failures fail. Real subprocess checks reject wrong
+  interpreter minors and checkout-shadowed imports. Development suite: 94 passed, 9 xfailed.
+
+- Exact replay: the documented `-x env_list=diagnostic` and fully qualified environment
+  overrides selected an absolute CPython 3.12.14 path despite 3.12.16 being installed.
+  Replaying the recorded 3.12.16 wheel result with `.tox/replay-constraints.txt` then passed
+  all 94 tests plus 9 xfails. Installed dependency pins matched byte-for-byte; constraints
+  appeared in both test and runtime installation commands. A patch-only override on a
+  Python-named environment was found ineffective and is not documented as a working replay.
+- Type-checking finding: NumPy 2.5 stubs use 3.12 syntax. Mypy stays on development Python
+  3.12; Ruff checks 3.11 syntax and the matrix verifies actual 3.11 execution. No new NumPy
+  bound or library source change was introduced. Pre-commit also normalised the missing
+  final newline in Spec Kit's workflow registry.
+
+- Final native wheel matrix with compatibility hooks: all five environments passed, each
+  with 94 passed and 9 xfailed; no ordinary skips. Development dependency listing and
+  SHA256 of `uv.lock`/`.python-version` matched before/after matrix selection and replay.
+  All pre-commit hooks passed, including gitleaks, Ruff, lock consistency and mypy.

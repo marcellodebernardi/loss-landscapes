@@ -204,3 +204,13 @@ No constitutional violations or exceptions. The tox-uv plugin is justified by th
 and platform-aware CPU installation. Prefer standard tox/pytest features and documented configuration.
 Project-specific code is limited to necessary package assertions, a readable pytest header and the
 specification's skip rule; no custom report schema, replay flag, scheduler or policy engine.
+
+
+## Implementation findings
+
+- NumPy 2.5 stubs in the Python 3.12 development environment require Python 3.12 syntax.
+  Keep mypy's target at 3.12; Ruff's 3.11 target and the full runtime matrix enforce the
+  lower supported Python boundary. This avoids adding an artificial NumPy restriction.
+- tox-uv 1.37.2 discards patch versions for named Python environments. Diagnostic replay
+  uses native fully qualified tox overrides and a temporary non-Python-factor environment,
+  with an absolute interpreter path. No custom runner or replay flag is introduced.

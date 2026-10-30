@@ -138,12 +138,33 @@ landscape = random_plane(agent_wrapper, metric, normalize="filter")
 
 
 ## 5. Installation and Use
-The package is available on PyPI. Install using `pip install loss-landscapes`. To use the library, import as follows:
 
-````python
+The modernised candidate targets the following combinations:
+
+| PyTorch minor series | CPython minor versions |
+| --- | --- |
+| 2.15 | 3.11, 3.12, 3.13, 3.14, 3.15 |
+
+Compatibility checks select the latest available compatible stable patches within these series.
+New minor series require an explicit policy update. Verification runs on Linux x86-64 CPU with
+standard GIL-enabled CPython. Native macOS (Apple Silicon)/Windows checks offer contributor feedback
+where upstream wheels exist; they do not establish additional platform guarantees. GPU support,
+free-threaded builds and alternative interpreters are not covered.
+
+The candidate declares both NumPy and PyTorch as runtime dependencies. Once released, normal
+`pip install loss-landscapes` will install them automatically; the published 3.0.6 release still
+has the limitations described above. Until then, build this checkout with `uv build` and install
+the generated wheel using `pip install PATH_TO_WHEEL`. Import it as follows:
+
+```python
 import loss_landscapes
 import loss_landscapes.metrics
-````
+```
+
+Successful installation and regression checks do not establish mathematical correctness. The
+implementation is unchanged: known normalisation, gradient/wrapper and `contrib` defects remain
+tracked by strict expected-failure tests. Numerical repairs, API changes and GPU improvements belong
+to follow-up work. See [CONTRIBUTING.md](CONTRIBUTING.md) for matrix commands and prerequisites.
 
 ### Development
 

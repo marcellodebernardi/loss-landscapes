@@ -7,7 +7,7 @@ Research date: 2026-10-30. This document records design decisions, not completed
 **Decision:** Declare `requires-python = ">=3.11,<3.16"` and runtime dependencies
 `torch>=2.15,<2.16` and `numpy`. Retain the existing NumPy requirement unless installation or
 runtime evidence requires a constraint. Update classifiers to Python 3.11–3.15, Ruff to `py311`,
-and mypy's language baseline to 3.11. Remove the obsolete uv Python-range workaround and move
+to 3.11; mypy remains on the Python 3.12 development baseline because NumPy 2.5 stubs use 3.12 syntax. Remove the obsolete uv Python-range workaround and move
 PyTorch out of the test dependency group. Regenerate `uv.lock`; retain `.python-version` at 3.12.
 
 **Rationale:** These closed Python/PyTorch boundaries implement the agreed support policy and
@@ -67,7 +67,7 @@ manually installing PyTorch into a shared development environment compromises is
 ## 4. Latest patches versus exact replay
 
 **Decision:** Provision test interpreters separately under `.tox/python`. Routine runs use current
-uv and `uv python install --install-dir .tox/python --upgrade --no-bin --no-registry` for the requested
+uv and `uv run --no-sync uv python install --install-dir .tox/python --upgrade --no-bin --no-registry` for the requested
 minors. Configure the directory and interpreter selection in tox/tox-uv rather than requiring manual
 shell exports; verify those settings reach environment creation. This avoids replacing development executables or registering
 them globally. Disable automatic interpreter downloads during tox execution so missing prerequisites
@@ -139,3 +139,8 @@ No unresolved design questions remain. Wheel listings and upstream metadata esta
 not runtime compatibility. Implementation must still run the matrix and treat any source-level
 compatibility failure as a scope blocker. Tool option interoperability, exact replay, CPU backend
 selection, and interpreter isolation must be exercised in validation before claiming completion.
+
+Implementation proof: native TOML environment overrides require the `tool.tox` prefix,
+whereas the root `env_list` override is unqualified. For exact replay use a temporary
+non-Python-factor environment with an absolute interpreter path; tox-uv 1.37.2 ignores
+patches and paths for Python-named environments. See quickstart for the exercised command.
