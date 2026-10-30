@@ -65,7 +65,8 @@ visualizations the user might use this type of data for are shown below.
 
 Sampling modifies the supplied model's parameters and disables its parameter gradients by default.
 Use `deepcopy_model=True`, as above, to evaluate a copy and preserve the supplied model.
-The notebooks in `examples/` use older APIs and need adaptation before use.
+See [the core-features notebook](examples/core-features.ipynb) for a training and plotting example.
+It additionally uses `torchvision`, `matplotlib` and `tqdm`; install these separately.
 
 
 ## 3. Metrics and Custom Metrics
@@ -132,7 +133,11 @@ the complete model, reuse the loss metric from the supervised example:
 ```python
 from loss_landscapes import GeneralModelWrapper
 
-model_wrapper = GeneralModelWrapper(model, [model[-1]], lambda model, inputs: model(inputs))
+model_wrapper = GeneralModelWrapper(
+    model=model,
+    modules=[model[-1]],
+    forward_fn=lambda model, inputs: model(inputs),
+)
 landscape = random_plane(model_wrapper, metric, normalization="filter", deepcopy_model=True)
 ```
 
