@@ -8,19 +8,28 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 Repository modernisation. **No library code changed**: the package builds from the same
-twelve source modules as before, and declares the same dependency contract as the
-published 3.0.6 release.
+twelve source modules as before. The dependency contract deliberately changes from
+the published 3.0.6 release: Python 3.11–3.15 and PyTorch 2.15 are now required. Users
+on older versions must upgrade their environment before installing this candidate.
 
 ### Added
 
 - `pyproject.toml` with `hatchling` and `hatch-vcs`, replacing `setup.py`, `setup.cfg` and
   `MANIFEST.in`. Versions now come from git tags.
 - `uv` for dependency management, with a committed `uv.lock`.
-- A `pytest` suite, run in CI on every pull request across Python 3.10 to 3.13.
+- A `pytest` suite and five isolated tox wheel-install environments for CPython 3.11–3.15
+  with PyTorch 2.15, plus source-archive installation verification on Python 3.12. Linux
+  x86-64 CPU CI runs all five combinations on pull requests and primary-branch pushes.
+- Standard tox logs/results and pytest JUnit reports, runtime/import-origin validation,
+  rejection of ordinary skips, and documented exact-version diagnostic reproduction.
 - `ruff`, `mypy`, `gitleaks` and `pre-commit`; GitHub Actions for CI and for releases via
   PyPI Trusted Publishing; Dependabot for action updates.
 
 ### Changed
+
+- Runtime metadata now requires Python `>=3.11,<3.16` and PyTorch `>=2.15,<2.16`;
+  compatibility runs refresh stable patches independently of the development lock.
+  GPU execution and additional platform guarantees remain follow-up work.
 
 - Moved the package to a `src/` layout.
 - Replaced `.gitignore` with GitHub's Python template. The previous file excluded `tests/`.
@@ -28,6 +37,10 @@ published 3.0.6 release.
   pointing at all along — so no release has ever contained the licence text.
 
 ### Fixed
+
+- PyTorch is now a declared runtime dependency, so a clean candidate installation can import
+  the library without a separate manual dependency install. The obsolete 3.0.6 metadata guard
+  has been removed. Known numerical defects remain unchanged and explicitly tracked.
 
 - The wheel no longer contains ~60 stale modules from the 1.x and 2.x refactors, which the
   3.0.6 wheel shipped because it was built over a dirty `build/` directory.

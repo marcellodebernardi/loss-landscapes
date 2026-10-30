@@ -11,13 +11,9 @@ easier, aiding the analysis of the geometry of neural network loss landscapes.
 
 This library does not provide plotting facilities, letting the user define how the data should be plotted.
 
-> **Status:** after seven years without maintenance, `loss-landscapes` is under active development again. The
-> repository has been modernised and a substantial rewrite is coming, targeting current versions of Python and
-> PyTorch. Expect the API to change.
->
-> Don't use the published release. Version 3.0.6 dates from 2019, does not declare its dependency on `torch` so a
-> clean `pip install` produces a package that cannot be imported, and several of its normalisation routines are
-> mathematically wrong in ways that distort the plots it exists to produce. The rewrite is the fix.
+> **Known limitations:** Some normalisation routines produce incorrect results, gradient evaluation
+> has known defects, and the `contrib` modules cannot be imported. See the strict `xfail` tests
+> for details before relying on affected functionality.
 
 
 ## 1. What is a Loss Landscape?
@@ -138,12 +134,32 @@ landscape = random_plane(agent_wrapper, metric, normalize="filter")
 
 
 ## 5. Installation and Use
-The package is available on PyPI. Install using `pip install loss-landscapes`. To use the library, import as follows:
 
-````python
+The build targets the following combinations:
+
+| PyTorch minor series | CPython minor versions |
+| --- | --- |
+| 2.15 | 3.11, 3.12, 3.13, 3.14, 3.15 |
+
+Compatibility is tested on Linux x86-64 CPU with standard, GIL-enabled CPython, using the latest
+compatible stable patches in these series. GPU execution, free-threaded builds and alternative
+interpreters are not covered by these checks.
+
+Install this checkout from the repository root:
+
+```bash
+python -m pip install .
+```
+
+This installs NumPy and PyTorch automatically. The published PyPI version, 3.0.6, does not declare
+PyTorch as a dependency; use the checkout installation above for the support matrix listed here.
+
+```python
 import loss_landscapes
 import loss_landscapes.metrics
-````
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for compatibility checks and platform prerequisites.
 
 ### Development
 

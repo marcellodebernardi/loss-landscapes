@@ -7,6 +7,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -18,74 +21,99 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          # hatch-vcs derives the version from tags.
           fetch-depth: 0
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-
-      - name: Install dependencies
-        run: uv sync --group lint --group test
-
-      - name: ruff check
-        run: uv run ruff check --output-format=github .
-
-      - name: ruff format
-        run: uv run ruff format --check --diff .
-
-      - name: mypy
-        run: uv run mypy
-
-  test:
-    name: Test (Python ${{ matrix.python-version }})
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: uv sync --no-default-groups --group test
-
-      - name: Run tests
-        run: uv run pytest --cov=loss_landscapes --cov-report=term-missing
+      - run: uv sync --locked --all-groups
+      - run: uv run --no-sync ruff check --output-format=github .
+      - run: uv run --no-sync ruff format --check --diff .
+      - run: uv run --no-sync mypy
 
   build:
     name: Build distributions
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-
-      - name: Build sdist and wheel
-        run: uv build
-
+      - name: Install locked compatibility driver
+        run: uv sync --locked --only-group compatibility --no-install-project
+      - name: Derive supported combinations from tox
+        id: matrix
+        shell: bash
+        run: |
+          matrix=$(uv run --no-sync tox list -d --no-desc | python -c 'import json,sys; print(json.dumps({"include": [{"environment": n, "python": "3." + n.split("-")[0][3:]} for n in sys.stdin.read().split()]}))')
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+      - name: Provision stable source-install interpreter
+        run: uvx uv@latest python install --install-dir .tox/python --upgrade --no-bin --no-registry 3.12
+      - name: Build candidate distributions
+        run: |
+          uv build
+          git rev-parse HEAD
+          sha256sum dist/*
       - name: Check distribution metadata
         run: uvx twine check dist/*
-
-      # TODO: drop once the follow-up PR changes the dependency contract deliberately.
-      - name: Verify the published dependency contract is unchanged
-        run: uv run python scripts/compare_with_published.py --version 3.0.6
-
+      - name: Validate actual source archive
+        shell: bash
+        run: uv run --no-sync tox run -e sdist --installpkg dist/*.tar.gz --result-json .tox/sdist-result.json
       - uses: actions/upload-artifact@v7
+        if: always()
         with:
           name: distributions
           path: dist/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: sdist-diagnostics
+          path: |
+            .tox/*/log/
+            .tox/.*/log/
+            .tox/*result.json
+          include-hidden-files: true
+          if-no-files-found: warn
+
+  compatibility:
+    name: Compatibility (${{ matrix.environment }})
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.build.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - name: Install locked compatibility driver
+        run: uv sync --locked --only-group compatibility --no-install-project
+      - name: Provision stable managed interpreters
+        run: uvx uv@latest python install --install-dir .tox/python --upgrade --no-bin --no-registry ${{ matrix.python }} 3.12
+      - uses: actions/download-artifact@v8
+        with:
+          name: distributions
+          path: dist/
+      - name: Verify candidate identity
+        run: |
+          git rev-parse HEAD
+          sha256sum dist/*
+      - name: Test installed candidate wheel
+        run: uv run --no-sync tox run -e ${{ matrix.environment }} --installpkg dist/*.whl --result-json .tox/compatibility-result.json
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: diagnostics-${{ matrix.environment }}
+          path: |
+            .tox/*/log/
+            .tox/.*/log/
+            .tox/*result.json
+          include-hidden-files: true
+          if-no-files-found: warn
