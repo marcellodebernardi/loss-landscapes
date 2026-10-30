@@ -98,7 +98,7 @@ that other jobs still report results, the affected check fails, and standard log
 - [X] T013 [P] [US2] Update the preparation/build portion of `.github/workflows/ci.yml` to install the locked compatibility driver, derive environment names/Python minors from `tox list -d --no-desc`, build one candidate wheel and sdist, validate that actual sdist on 3.12, and retain the original distribution files and hashes. Use a short workflow-local JSON conversion rather than a second hardcoded matrix or new orchestration script.
 - [X] T014 [US2] Replace the old version jobs in `.github/workflows/ci.yml` with the five derived Linux x86-64 CPU jobs, provisioning current stable interpreter patches and passing the identical candidate wheel to each selected tox environment via `--installpkg`; run on PRs to `main` and pushes to `main`, keep `fail-fast: false`, and name checks `Compatibility (py311-torch215)` through `Compatibility (py315-torch215)`. Retain `Build distributions` and `Lint and type-check`.
 - [X] T015 [US2] Configure standard tox result JSON/dependency listings and pytest JUnit output through `pyproject.toml`, and always upload available logs/reports from `.github/workflows/ci.yml`, including on failure. Keep revision and artifact identity visible, treat setup-only logs as failure evidence rather than success, and rely on native exit/status semantics instead of adding an aggregate merge gate or custom evidence-file convention.
-- [ ] T016 [US2] Exercise the workflow and failure cases described in `specs/001-supported-versions-update/quickstart.md`: wrong interpreter/import origin, unavailable dependency or interpreter, strict unexpected pass, ordinary skip, and a controlled failure in only one CI environment. Confirm non-zero/failed results, other matrix results and retained diagnostics; remove temporary failure injections before acceptance and leave `.github/workflows/release.yml` and GitHub settings untouched.
+- [X] T016 [US2] Exercise the workflow and failure cases described in `specs/001-supported-versions-update/quickstart.md`: wrong interpreter/import origin, unavailable dependency or interpreter, strict unexpected pass, ordinary skip, and a controlled failure in only one CI environment. Confirm non-zero/failed results, other matrix results and retained diagnostics; remove temporary failure injections before acceptance and leave `.github/workflows/release.yml` and GitHub settings untouched.
 
 **Checkpoint**: All five Linux checks succeed for the real candidate; controlled failures cannot
 be mistaken for full compatibility. Missing or cancelled checks are not positive evidence.
@@ -241,8 +241,7 @@ T012/T015/T019; SC-004 by T017/T020; SC-005 by T023.
 
 ## Acceptance status
 
-Implementation and local validation are complete. T016 and T023 remain unchecked because GitHub's
-run/check API still reports queued for the probe and clean-candidate runs, even though their
-uploaded tox/JUnit results are complete. Probe evidence and clean Linux results are recorded in
-quickstart.md. Confirm completed failing/successful workflow statuses before marking these tasks
-complete; do not treat uploaded reports alone as fulfilled required-check acceptance.
+Implementation and local validation are complete. GitHub now confirms the probe workflow failed
+only on Python 3.11 and the clean revision `6626d2e` passed all required CI checks. T016 is complete.
+T023 awaits a successful full CI run for the review revisions, including the stronger collection-skip
+regression test. See quickstart.md for completed workflow links and validation evidence.

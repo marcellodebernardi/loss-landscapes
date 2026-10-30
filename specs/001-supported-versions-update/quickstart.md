@@ -168,7 +168,7 @@ validation; record complete Linux evidence for the candidate and leave publishin
   appeared in both test and runtime installation commands. A patch-only override on a
   Python-named environment was found ineffective and is not documented as a working replay.
 - Type-checking finding: NumPy 2.5 stubs use 3.12 syntax. Mypy stays on development Python
-  3.12; Ruff checks 3.11 syntax and the matrix verifies actual 3.11 execution. No new NumPy
+  3.12; Ruff targets 3.11 for version-sensitive rules and the matrix verifies actual 3.11 execution. No new NumPy
   bound or library source change was introduced. Pre-commit also normalised the missing
   final newline in Spec Kit's workflow registry.
 
@@ -198,3 +198,14 @@ validation; record complete Linux evidence for the candidate and leave publishin
   mypy, all pre-commit hooks and wheel/sdist metadata checks passed. Library source still
   matches `00abb16`; release workflow and `.python-version` are unchanged; no `.tox/` outputs
   are tracked. Only documentation/task status changed after the clean candidate above.
+
+- Review follow-up: GitHub confirms probe run 41102152153 completed with failure only for
+  Python 3.11, while the other four combinations, build and lint succeeded. The subsequent
+  [clean run 41104556913](https://github.com/marcellodebernardi/loss-landscapes/actions/runs/41104556913)
+  at `6626d2e` completed successfully across all required checks, resolving the earlier status
+  uncertainty and Copilot's concern about the cancelled intermediate run.
+- Greptile's collection-skip finding is addressed with separate skipped and passing modules;
+  the session must exit 1. Removing collection-skip recording makes the new test fail (the
+  session incorrectly exits 0); restoring the hook passes. Local full suite: 95 passed,
+  9 known xfails. All pre-commit checks pass. README describes the current project and direct
+  checkout installation, and compatibility tests include explanatory one-line docstrings.

@@ -101,8 +101,8 @@ convention = "google"
 # the PEP 561 `py.typed` marker once the package type-checks cleanly.
 [tool.mypy]
 files = ["src"]
-# NumPy stubs in the Python 3.12 development environment use Python 3.12 syntax.
-# Ruff enforces 3.11 source syntax; the compatibility matrix verifies runtime support.
+# Type-check against 3.12 because the installed NumPy stubs use its syntax.
+# Ruff targets 3.11 for version-sensitive rules; tox verifies actual 3.11 execution.
 python_version = "3.12"
 ignore_missing_imports = true
 warn_unused_configs = true

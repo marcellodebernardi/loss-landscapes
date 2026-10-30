@@ -11,13 +11,9 @@ easier, aiding the analysis of the geometry of neural network loss landscapes.
 
 This library does not provide plotting facilities, letting the user define how the data should be plotted.
 
-> **Status:** after seven years without maintenance, `loss-landscapes` is under active development again. The
-> repository has been modernised and a substantial rewrite is coming, targeting current versions of Python and
-> PyTorch. Expect the API to change.
->
-> Don't use the published release. Version 3.0.6 dates from 2019, does not declare its dependency on `torch` so a
-> clean `pip install` produces a package that cannot be imported, and several of its normalisation routines are
-> mathematically wrong in ways that distort the plots it exists to produce. The rewrite is the fix.
+> **Known limitations:** Some normalisation routines produce incorrect results, gradient evaluation
+> has known defects, and the `contrib` modules cannot be imported. See the strict `xfail` tests
+> for details before relying on affected functionality.
 
 
 ## 1. What is a Loss Landscape?
@@ -139,32 +135,31 @@ landscape = random_plane(agent_wrapper, metric, normalize="filter")
 
 ## 5. Installation and Use
 
-The modernised candidate targets the following combinations:
+The build targets the following combinations:
 
 | PyTorch minor series | CPython minor versions |
 | --- | --- |
 | 2.15 | 3.11, 3.12, 3.13, 3.14, 3.15 |
 
-Compatibility checks select the latest available compatible stable patches within these series.
-New minor series require an explicit policy update. Verification runs on Linux x86-64 CPU with
-standard GIL-enabled CPython. Native macOS (Apple Silicon)/Windows checks offer contributor feedback
-where upstream wheels exist; they do not establish additional platform guarantees. GPU support,
-free-threaded builds and alternative interpreters are not covered.
+Compatibility is tested on Linux x86-64 CPU with standard, GIL-enabled CPython, using the latest
+compatible stable patches in these series. GPU execution, free-threaded builds and alternative
+interpreters are not covered by these checks.
 
-The candidate declares both NumPy and PyTorch as runtime dependencies. Once released, normal
-`pip install loss-landscapes` will install them automatically; the published 3.0.6 release still
-has the limitations described above. Until then, build this checkout with `uv build` and install
-the generated wheel using `pip install PATH_TO_WHEEL`. Import it as follows:
+Install this checkout from the repository root:
+
+```bash
+python -m pip install .
+```
+
+This installs NumPy and PyTorch automatically. The published PyPI version, 3.0.6, does not declare
+PyTorch as a dependency; use the checkout installation above for the support matrix listed here.
 
 ```python
 import loss_landscapes
 import loss_landscapes.metrics
 ```
 
-Successful installation and regression checks do not establish mathematical correctness. The
-implementation is unchanged: known normalisation, gradient/wrapper and `contrib` defects remain
-tracked by strict expected-failure tests. Numerical repairs, API changes and GPU improvements belong
-to follow-up work. See [CONTRIBUTING.md](CONTRIBUTING.md) for matrix commands and prerequisites.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for compatibility checks and platform prerequisites.
 
 ### Development
 

@@ -209,8 +209,8 @@ specification's skip rule; no custom report schema, replay flag, scheduler or po
 ## Implementation findings
 
 - NumPy 2.5 stubs in the Python 3.12 development environment require Python 3.12 syntax.
-  Keep mypy's target at 3.12; Ruff's 3.11 target and the full runtime matrix enforce the
-  lower supported Python boundary. This avoids adding an artificial NumPy restriction.
+  Keep mypy's target at 3.12; Ruff uses a 3.11 baseline for version-sensitive rules; the full runtime matrix verifies
+  the lower supported Python boundary. This avoids adding an artificial NumPy restriction.
 - tox-uv 1.37.2 discards patch versions for named Python environments. Diagnostic replay
   uses native fully qualified tox overrides and a temporary non-Python-factor environment,
   with an absolute interpreter path. No custom runner or replay flag is introduced.
