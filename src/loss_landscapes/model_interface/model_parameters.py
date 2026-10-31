@@ -193,6 +193,19 @@ class ModelParameters:
             param_products.append((self.parameters[idx] * other.parameters[idx]).sum().item())
         return sum(param_products)
 
+    def orthogonalize_(self, other: "ModelParameters"):
+        """
+        In-place Gram-Schmidt step: subtract this vector's projection onto another vector.
+
+        Afterwards this vector is orthogonal to `other`, up to floating-point rounding, and
+        the two still span the same plane as before. `other` is not modified. A zero `other`
+        raises ZeroDivisionError because the projection onto it is undefined.
+
+        :param other: vector to make this one orthogonal to
+        :return: none
+        """
+        self.sub_(other * (self.dot(other) / other.dot(other)))
+
     def model_normalize_(self, ref_point: "ModelParameters", order=2):
         """
         Rescale this vector in place to match the reference model's norm.
@@ -315,12 +328,12 @@ def rand_n_like(example_vector: ModelParameters) -> ModelParameters:
 def orthogonal_to(vector: ModelParameters) -> ModelParameters:
     """
     Create a new ModelParameters object of size and shape compatible with the given
-    example vector, such that the two vectors are very nearly orthogonal.
+    example vector, such that the two vectors are orthogonal up to floating-point rounding.
     :param vector: original vector
-    :return: new vector that is very nearly orthogonal to original vector
+    :return: new vector that is orthogonal to original vector
     """
     new_vector = rand_u_like(vector)
-    new_vector = new_vector - new_vector.dot(vector) * vector / math.pow(vector.model_norm(2), 2)
+    new_vector.orthogonalize_(vector)
     return new_vector
 
 

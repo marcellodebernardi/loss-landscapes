@@ -214,6 +214,31 @@ def test_orthogonal_to_produces_an_orthogonal_vector(parameters):
     assert other.dot(direction) / normaliser == pytest.approx(0.0, abs=1e-5)
 
 
+def test_orthogonalize_matches_the_analytic_gram_schmidt_step():
+    """(3, -1) minus its projection 0.8 * (3, 1) onto (3, 1) is (0.6, -1.8), split across tensors."""
+    vector = ModelParameters([torch.tensor([3.0]), torch.tensor([[-1.0]])])
+    other = ModelParameters([torch.tensor([3.0]), torch.tensor([[1.0]])])
+
+    vector.orthogonalize_(other)
+
+    torch.testing.assert_close(vector[0], torch.tensor([0.6]))
+    torch.testing.assert_close(vector[1], torch.tensor([[-1.8]]))
+    torch.testing.assert_close(other[0], torch.tensor([3.0]))
+    torch.testing.assert_close(other[1], torch.tensor([[1.0]]))
+
+
+def test_orthogonalize_leaves_an_orthogonal_vector_unchanged():
+    vector = ModelParameters([torch.tensor([1.0, -1.0])])
+    vector.orthogonalize_(ModelParameters([torch.tensor([1.0, 1.0])]))
+    torch.testing.assert_close(vector[0], torch.tensor([1.0, -1.0]))
+
+
+def test_orthogonalize_against_a_zero_vector_raises():
+    vector = ModelParameters([torch.tensor([1.0, 2.0])])
+    with pytest.raises(ZeroDivisionError):
+        vector.orthogonalize_(ModelParameters([torch.tensor([0.0, 0.0])]))
+
+
 def test_orthogonal_to_is_not_degenerate(parameters):
     """A zero vector would be trivially orthogonal; make sure we did not get one."""
     direction = rand_u_like(parameters)

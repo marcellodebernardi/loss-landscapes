@@ -219,23 +219,56 @@ def cosine(a: ModelParameters, b: ModelParameters) -> float:
     return a.dot(b) / (a.model_norm() * b.model_norm())
 
 
-@pytest.mark.parametrize("normalization", [None, "model"])
-def test_plane_directions_are_orthogonal_with_global_scaling(monkeypatch, model, metric, normalization):
-    """A common scale factor must preserve the angle between plane directions."""
+@pytest.mark.parametrize("normalization", NORMALIZATIONS)
+def test_plane_directions_are_orthogonal(monkeypatch, model, metric, normalization):
+    """The grid is plotted on perpendicular axes, so the directions must be orthogonal."""
     one, two = _capture_plane_directions(monkeypatch, model, metric, normalization=normalization)
     assert cosine(one, two) == pytest.approx(0.0, abs=1e-5)
+
+
+def _block_norm_ratios(direction: ModelParameters, reference: ModelParameters, normalization: str) -> list:
+    """Ratio of each layer or filter norm of `direction` to the matching norm of `reference`."""
+    if normalization == "layer":
+        return [direction.layer_norm(i) / reference.layer_norm(i) for i in range(len(reference))]
+    ratios = []
+    for i, parameter in enumerate(reference):
+        if parameter.dim() == 1:
+            ratios.append(direction[i].norm().item() / parameter.norm().item())
+        else:
+            ratios.extend(direction.filter_norm((i, f)) / reference.filter_norm((i, f)) for f in range(len(parameter)))
+    return ratios
 
 
 @pytest.mark.parametrize("normalization", ["filter", "layer"])
-# TODO: resolve the plane geometry under layer/filter normalisation, then drop this marker.
-@pytest.mark.xfail(
-    reason="random_plane applies layer/filter normalisation after orthogonalisation, changing "
-    "relative tensor/filter scales so the directions need not remain orthogonal.",
-    strict=True,
-)
-def test_plane_directions_are_orthogonal_with_normalization(monkeypatch, model, metric, normalization):
+def test_plane_directions_keep_their_normalization(monkeypatch, model, metric, normalization):
+    """Orthogonalising must not undo layer/filter normalisation of either direction.
+
+    Both directions are scaled by one factor each after normalisation, so a normalised
+    direction has the same ratio to the start point in every layer or filter.
+    """
+    start = snapshot(model)
     one, two = _capture_plane_directions(monkeypatch, model, metric, normalization=normalization)
+    for direction in (one, two):
+        ratios = _block_norm_ratios(direction, start, normalization)
+        assert ratios == pytest.approx([ratios[0]] * len(ratios), rel=1e-4)
+
+
+def test_plane_directions_are_orthogonal_when_normalization_cannot_converge(monkeypatch):
+    """Single-element filters can stall the iteration; orthogonality must still hold."""
+    torch.manual_seed(0)
+    model = torch.nn.Sequential(torch.nn.Linear(1, 8), torch.nn.Tanh(), torch.nn.Linear(8, 1))
+    inputs, targets = torch.rand(4, 1), torch.rand(4, 1)
+    metric = Loss(torch.nn.MSELoss(), inputs, targets)
+
+    one, two = _capture_plane_directions(monkeypatch, model, metric, normalization="filter")
     assert cosine(one, two) == pytest.approx(0.0, abs=1e-5)
+
+
+def test_random_plane_rejects_a_model_with_one_parameter():
+    model = torch.nn.Linear(1, 1, bias=False)
+    metric = Loss(torch.nn.MSELoss(), torch.rand(4, 1), torch.rand(4, 1))
+    with pytest.raises(ValueError):
+        loss_landscapes.random_plane(model, metric, steps=3)
 
 
 @pytest.mark.parametrize("sampler", [loss_landscapes.random_line, loss_landscapes.random_plane])
