@@ -7,6 +7,16 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Model-wise normalisation now calculates one scale factor before modifying any parameter
+  tensor, preserving direction and matching the reference norm independently of tensor order
+  or partitioning. Both norms use the requested `order`.
+- Model-wise normalisation no longer rotates the directions used by `random_line` and
+  `random_plane`. Results with `normalization="model"` may differ from 4.0.0 because the
+  previous behaviour was incorrect. Layer/filter normalisation and other known numerical
+  defects are unchanged.
+
 ## [4.0.0] - 2026-10-30
 
 Repository modernisation. **No library code changed**: the package builds from the same

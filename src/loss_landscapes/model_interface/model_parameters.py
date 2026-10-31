@@ -195,13 +195,20 @@ class ModelParameters:
 
     def model_normalize_(self, ref_point: "ModelParameters", order=2):
         """
-        In-place model-wise normalization of the tensor.
-        :param ref_point: use this model's norm, if given
+        Rescale this vector in place to match the reference model's norm.
+
+        Both norms are evaluated before mutation, using the same order. A single
+        scale factor preserves direction across all parameter tensors. A zero
+        reference norm maps a nonzero vector to zero; a zero source norm raises
+        ZeroDivisionError because its normalised direction is undefined.
+
+        :param ref_point: model parameters whose norm sets the target magnitude
         :param order: norm order, e.g. 2 for L2 norm
         :return: none
         """
+        scale = ref_point.model_norm(order) / self.model_norm(order)
         for parameter in self.parameters:
-            parameter *= ref_point.model_norm(order) / self.model_norm()
+            parameter *= scale
 
     def layer_normalize_(self, ref_point: "ModelParameters", order=2):
         """

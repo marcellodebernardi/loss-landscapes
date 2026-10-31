@@ -120,12 +120,6 @@ def test_layer_normalize_gives_each_layer_the_reference_layer_norm(parameters):
         assert direction.layer_norm(index) == pytest.approx(parameters.layer_norm(index), rel=1e-4)
 
 
-# TODO: fix model_normalize_ to use a norm captured before scaling, then drop this.
-@pytest.mark.xfail(
-    reason="model_normalize_ recomputes self.model_norm() inside the loop, so each layer is "
-    "scaled by a different factor and the result does not carry the reference norm.",
-    strict=True,
-)
 def test_model_normalize_gives_the_reference_model_norm(parameters):
     direction = rand_u_like(parameters)
     direction.model_normalize_(parameters)
@@ -133,11 +127,80 @@ def test_model_normalize_gives_the_reference_model_norm(parameters):
 
 
 def test_model_normalize_is_correct_for_a_single_layer():
-    """The bug above cannot bite when there is only one layer to rescale."""
+    """Match the reference norm when the vector consists of one tensor."""
     reference = parameters_like((3, 4))
     direction = rand_u_like(reference)
     direction.model_normalize_(reference)
     assert direction.model_norm() == pytest.approx(reference.model_norm(), rel=1e-4)
+
+
+@pytest.mark.parametrize("dtype", [torch.float32, torch.float64])
+@pytest.mark.parametrize("order", [2, 4])
+def test_model_normalize_preserves_direction_and_matches_reference_norm(dtype, order):
+    """Scale every component by two, independent of tensor shape and the norm order."""
+    direction = ModelParameters([torch.tensor([-3.0], dtype=dtype), torch.tensor([[4.0]], dtype=dtype)])
+    reference = ModelParameters([torch.tensor([8.0], dtype=dtype), torch.tensor([[6.0]], dtype=dtype)])
+
+    direction.model_normalize_(reference, order=order)
+
+    torch.testing.assert_close(direction[0], torch.tensor([-6.0], dtype=dtype))
+    torch.testing.assert_close(direction[1], torch.tensor([[8.0]], dtype=dtype))
+    flat = torch.cat([p.flatten() for p in direction])
+    reference_flat = torch.cat([p.flatten() for p in reference])
+    torch.testing.assert_close(
+        torch.linalg.vector_norm(flat, ord=order), torch.linalg.vector_norm(reference_flat, ord=order)
+    )
+    torch.testing.assert_close(reference[0], torch.tensor([8.0], dtype=dtype))
+    torch.testing.assert_close(reference[1], torch.tensor([[6.0]], dtype=dtype))
+
+
+def test_model_normalize_is_independent_of_tensor_order():
+    """Reordering parameter tensors must only reorder the normalised result."""
+    forward = ModelParameters([torch.tensor([3.0]), torch.tensor([4.0]), torch.tensor([12.0])])
+    reverse = ModelParameters([p.clone() for p in reversed(forward.parameters)])
+    reference = ModelParameters([torch.tensor([26.0])])
+
+    forward.model_normalize_(reference)
+    reverse.model_normalize_(reference)
+
+    expected = torch.tensor([6.0, 8.0, 24.0])
+    torch.testing.assert_close(torch.cat(list(forward)), expected)
+    torch.testing.assert_close(torch.cat(list(reversed(reverse.parameters))), expected)
+
+
+def test_model_normalize_is_independent_of_tensor_partition():
+    """Splitting one vector across tensors must not change model-wise normalisation."""
+    whole = ModelParameters([torch.tensor([3.0, 4.0])])
+    split = ModelParameters([torch.tensor([3.0]), torch.tensor([4.0])])
+    reference = ModelParameters([torch.tensor([10.0])])
+
+    whole.model_normalize_(reference)
+    split.model_normalize_(reference)
+
+    torch.testing.assert_close(whole[0], torch.tensor([6.0, 8.0]))
+    torch.testing.assert_close(torch.cat(list(split)), whole[0])
+
+
+def test_model_normalize_to_zero_reference_sets_every_tensor_to_zero():
+    """A nonzero vector scales to zero when the reference norm is zero."""
+    direction = ModelParameters([torch.tensor([3.0]), torch.tensor([4.0])])
+    reference = ModelParameters([torch.tensor([0.0])])
+
+    direction.model_normalize_(reference)
+
+    for parameter in direction:
+        torch.testing.assert_close(parameter, torch.zeros_like(parameter))
+
+
+def test_model_normalize_rejects_zero_direction_without_mutating_reference():
+    """Preserve the existing division-by-zero error for an undefined direction."""
+    direction = ModelParameters([torch.tensor([0.0]), torch.tensor([0.0])])
+    reference = ModelParameters([torch.tensor([10.0])])
+
+    with pytest.raises(ZeroDivisionError):
+        direction.model_normalize_(reference)
+
+    torch.testing.assert_close(reference[0], torch.tensor([10.0]))
 
 
 # --- orthogonality ---------------------------------------------------------

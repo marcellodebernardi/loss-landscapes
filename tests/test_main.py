@@ -219,22 +219,34 @@ def cosine(a: ModelParameters, b: ModelParameters) -> float:
     return a.dot(b) / (a.model_norm() * b.model_norm())
 
 
-def test_plane_directions_are_orthogonal_without_normalization(monkeypatch, model, metric):
-    one, two = _capture_plane_directions(monkeypatch, model, metric, normalization=None)
+@pytest.mark.parametrize("normalization", [None, "model"])
+def test_plane_directions_are_orthogonal_with_global_scaling(monkeypatch, model, metric, normalization):
+    """A common scale factor must preserve the angle between plane directions."""
+    one, two = _capture_plane_directions(monkeypatch, model, metric, normalization=normalization)
     assert cosine(one, two) == pytest.approx(0.0, abs=1e-5)
 
 
-@pytest.mark.parametrize("normalization", ["filter", "layer", "model"])
-# TODO: orthogonalise the plane directions after normalizing, then drop this marker.
+@pytest.mark.parametrize("normalization", ["filter", "layer"])
+# TODO: resolve the plane geometry under layer/filter normalisation, then drop this marker.
 @pytest.mark.xfail(
-    reason="random_plane makes dir_two orthogonal to dir_one and only then normalizes both, "
-    "which rotates them apart again. The plane the grid is sampled on is therefore skewed "
-    "whenever normalization is enabled, which is the default.",
+    reason="random_plane applies layer/filter normalisation after orthogonalisation, changing "
+    "relative tensor/filter scales so the directions need not remain orthogonal.",
     strict=True,
 )
 def test_plane_directions_are_orthogonal_with_normalization(monkeypatch, model, metric, normalization):
     one, two = _capture_plane_directions(monkeypatch, model, metric, normalization=normalization)
     assert cosine(one, two) == pytest.approx(0.0, abs=1e-5)
+
+
+@pytest.mark.parametrize("sampler", [loss_landscapes.random_line, loss_landscapes.random_plane])
+def test_model_normalization_preserves_the_sampled_subspace(sampler, model, metric):
+    """Global normalisation must preserve samples after the common distance scaling."""
+    torch.manual_seed(123)
+    unnormalised = sampler(model, metric, distance=0.5, steps=4, normalization=None, deepcopy_model=True)
+    torch.manual_seed(123)
+    normalised = sampler(model, metric, distance=0.5, steps=4, normalization="model", deepcopy_model=True)
+
+    np.testing.assert_allclose(normalised, unnormalised, rtol=1e-5, atol=1e-6)
 
 
 # --- reproducibility -------------------------------------------------------
