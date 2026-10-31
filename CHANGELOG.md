@@ -7,6 +7,29 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `random_plane` directions are now orthogonal under layer- and filter-wise normalisation.
+  Previously the second direction was orthogonalised before normalisation, which rescales
+  layers or filters by different factors and does not preserve angles, so the grid was
+  sheared relative to the perpendicular axes it is plotted on. The second direction is now
+  made orthogonal after normalisation by alternating Gram-Schmidt projection and
+  renormalisation (at most 20 iterations, typically 1-3), ending on a projection so that
+  orthogonality always holds. Its layer/filter norms match the start point's to within a
+  small tolerance, or only approximately for models with many single-parameter filters.
+  Results with `normalization="filter"` or `"layer"` will differ from 4.0.1.
+- Layer- and filter-wise normalisation set a block whose reference norm is zero (such as a
+  zero-initialised bias) to zero without dividing by its own norm. Filter normalisation
+  previously raised `ZeroDivisionError` for zero biases, and repeated normalisation in
+  `random_plane` did so for zero layers too.
+- `random_plane` raises `ValueError` for a model with fewer than two parameters instead of
+  failing with an unrelated error, and its docstring now describes the 2-D return value.
+
+### Added
+
+- `ModelParameters.orthogonalize_`, an in-place Gram-Schmidt step, now also used by
+  `orthogonal_to`.
+
 ## [4.0.1] - 2026-10-31
 
 ### Fixed

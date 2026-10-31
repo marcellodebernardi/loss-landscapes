@@ -9,7 +9,7 @@ import numpy as np
 import torch.nn
 
 from loss_landscapes.metrics.metric import Metric
-from loss_landscapes.model_interface.model_parameters import orthogonal_to, rand_u_like
+from loss_landscapes.model_interface.model_parameters import ModelParameters, orthogonal_to, rand_u_like
 from loss_landscapes.model_interface.model_wrapper import ModelWrapper, wrap_model
 
 
@@ -261,8 +261,15 @@ def random_plane(
 
     That is, given a neural network model, whose parameters define a point in parameter
     space, and a distance, the loss is computed at 'steps' * 'steps' points along the
-    plane defined by the two random directions, from the start point up to the maximum
-    distance in both directions.
+    plane defined by the two random directions, on a grid around the start point that spans
+    'distance' times the norm of the start point's parameters along each direction.
+
+    The two directions are orthogonal, up to floating-point rounding, so the returned grid
+    can be plotted on perpendicular axes. The first direction is normalized exactly. The
+    second is normalized to within a small tolerance, because making it orthogonal to the
+    first perturbs its layer or filter norms; for models in which many layers or filters hold
+    a single parameter, its norms may be only approximate. A model with fewer than two
+    parameters has no plane through it and raises ValueError.
 
     Note that the dimensionality of the model parameters has an impact on the expected
     length of a uniformly sampled other in parameter space. That is, the more parameters
@@ -289,27 +296,44 @@ def random_plane(
     :param steps: at how many steps from start to end the model is evaluated
     :param normalization: normalization of direction vectors, must be one of 'filter', 'layer', 'model'
     :param deepcopy_model: indicates whether the method will deepcopy the model(s) to avoid aliasing
-    :return: 1-d array of loss values along the line connecting start and end models
+    :return: 2-d array of shape (steps, steps), where entry [i, j] is the value at the i-th step
+        along the first direction and the j-th step along the second
     """
     model_start_wrapper = wrap_model(copy.deepcopy(model) if deepcopy_model else model)
 
     start_point = model_start_wrapper.get_module_parameters()
+    if start_point.numel() < 2:
+        raise ValueError("random_plane requires a model with at least two parameters")
     dir_one = rand_u_like(start_point)
     dir_two = orthogonal_to(dir_one)
 
-    if normalization == "model":
-        dir_one.model_normalize_(start_point)
-        dir_two.model_normalize_(start_point)
-    elif normalization == "layer":
-        dir_one.layer_normalize_(start_point)
-        dir_two.layer_normalize_(start_point)
-    elif normalization == "filter":
-        dir_one.filter_normalize_(start_point)
-        dir_two.filter_normalize_(start_point)
-    elif normalization is None:
-        pass
-    else:
-        raise AttributeError("Unsupported normalization argument. Supported values are model, layer, and filter")
+    if normalization is not None:
+        if normalization == "model":
+            normalize_ = ModelParameters.model_normalize_
+        elif normalization == "layer":
+            normalize_ = ModelParameters.layer_normalize_
+        elif normalization == "filter":
+            normalize_ = ModelParameters.filter_normalize_
+        else:
+            raise AttributeError("Unsupported normalization argument. Supported values are model, layer, and filter")
+        normalize_(dir_one, start_point)
+        normalize_(dir_two, start_point)
+
+        # Layer- and filter-wise normalisation rescale blocks of a direction by different factors,
+        # which does not preserve angles, so the directions are no longer orthogonal. Alternate
+        # projecting dir_two onto the orthogonal complement of dir_one and renormalising it until
+        # the pair is orthogonal to within tolerance; this takes a few iterations for typical
+        # models. It can stall when many blocks hold a single element, so the loop is capped, and
+        # it always ends on a projection so that orthogonality holds even when the cap is reached.
+        tolerance = 1e-6
+        max_iterations = 20
+        for _ in range(max_iterations):
+            cosine = dir_one.dot(dir_two) / (dir_one.model_norm() * dir_two.model_norm())
+            if abs(cosine) < tolerance:
+                break
+            dir_two.orthogonalize_(dir_one)
+            normalize_(dir_two, start_point)
+        dir_two.orthogonalize_(dir_one)
 
     # scale to match steps and total distance
     dir_one.mul_(((start_point.model_norm() * distance) / steps) / dir_one.model_norm())
