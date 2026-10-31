@@ -264,6 +264,18 @@ def test_plane_directions_are_orthogonal_when_normalization_cannot_converge(monk
     assert cosine(one, two) == pytest.approx(0.0, abs=1e-5)
 
 
+@pytest.mark.parametrize("normalization", ["layer", "filter"])
+def test_random_plane_handles_zero_biases(monkeypatch, model, metric, normalization):
+    """Zero-initialised biases have zero reference norms, which repeated normalisation must tolerate."""
+    with torch.no_grad():
+        for layer in (model[0], model[2]):
+            layer.bias.zero_()
+
+    one, two = _capture_plane_directions(monkeypatch, model, metric, normalization=normalization)
+    assert cosine(one, two) == pytest.approx(0.0, abs=1e-5)
+    assert np.isfinite(loss_landscapes.random_plane(model, metric, steps=3, normalization=normalization)).all()
+
+
 def test_random_plane_rejects_a_model_with_one_parameter():
     model = torch.nn.Linear(1, 1, bias=False)
     metric = Loss(torch.nn.MSELoss(), torch.rand(4, 1), torch.rand(4, 1))

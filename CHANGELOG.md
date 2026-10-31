@@ -18,6 +18,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   orthogonality always holds. Its layer/filter norms match the start point's to within a
   small tolerance, or only approximately for models with many single-parameter filters.
   Results with `normalization="filter"` or `"layer"` will differ from 4.0.1.
+- Layer- and filter-wise normalisation set a block whose reference norm is zero (such as a
+  zero-initialised bias) to zero without dividing by its own norm. Filter normalisation
+  previously raised `ZeroDivisionError` for zero biases, and repeated normalisation in
+  `random_plane` did so for zero layers too.
 - `random_plane` raises `ValueError` for a model with fewer than two parameters instead of
   failing with an unrelated error, and its docstring now describes the 2-D return value.
 

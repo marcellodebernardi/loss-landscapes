@@ -120,6 +120,22 @@ def test_layer_normalize_gives_each_layer_the_reference_layer_norm(parameters):
         assert direction.layer_norm(index) == pytest.approx(parameters.layer_norm(index), rel=1e-4)
 
 
+@pytest.mark.parametrize("normalization", ["layer", "filter"])
+def test_normalize_maps_zero_reference_blocks_to_zero_repeatedly(normalization):
+    """A zero reference layer or filter (e.g. a zero bias) zeroes the block, also when already zero."""
+    reference = ModelParameters([torch.tensor([[3.0, 4.0], [0.0, 0.0]]), torch.tensor([0.0, 0.0])])
+    direction = ModelParameters([torch.tensor([[1.0, 1.0], [1.0, 2.0]]), torch.tensor([5.0, -1.0])])
+
+    for _ in range(2):
+        getattr(direction, f"{normalization}_normalize_")(reference)
+
+    torch.testing.assert_close(direction[1], torch.zeros(2))
+    if normalization == "filter":
+        torch.testing.assert_close(direction[0], torch.tensor([[5.0 / 2**0.5, 5.0 / 2**0.5], [0.0, 0.0]]))
+    else:
+        assert direction.layer_norm(0) == pytest.approx(5.0)
+
+
 def test_model_normalize_gives_the_reference_model_norm(parameters):
     direction = rand_u_like(parameters)
     direction.model_normalize_(parameters)

@@ -226,17 +226,26 @@ class ModelParameters:
     def layer_normalize_(self, ref_point: "ModelParameters", order=2):
         """
         In-place layer-wise normalization of the tensor.
+
+        A layer whose reference norm is zero, such as a zero-initialised bias, is set to zero
+        without dividing by its own norm, so normalizing again leaves it at zero.
+
         :param ref_point: use this model's layer norms, if given
         :param order: norm order, e.g. 2 for L2 norm
         :return: none
         """
         # in-place normalize each parameter
         for layer_idx, parameter in enumerate(self.parameters, 0):
-            parameter *= ref_point.layer_norm(layer_idx, order) / self.layer_norm(layer_idx, order)
+            ref_norm = ref_point.layer_norm(layer_idx, order)
+            parameter *= 0.0 if ref_norm == 0 else ref_norm / self.layer_norm(layer_idx, order)
 
     def filter_normalize_(self, ref_point: "ModelParameters", order=2):
         """
         In-place filter-wise normalization of the tensor.
+
+        A filter or bias vector whose reference norm is zero is set to zero without dividing by
+        its own norm, so normalizing again leaves it at zero.
+
         :param ref_point: use this model's filter norms, if given
         :param order: norm order, e.g. 2 for L2 norm
         :return: none
@@ -244,10 +253,12 @@ class ModelParameters:
         for l in range(len(self.parameters)):
             # normalize one-dimensional bias vectors
             if len(self.parameters[l].size()) == 1:
-                self.parameters[l] *= ref_point.parameters[l].norm(order) / self.parameters[l].norm(order)
+                ref_norm = ref_point.parameters[l].norm(order).item()
+                self.parameters[l] *= 0.0 if ref_norm == 0 else ref_norm / self.parameters[l].norm(order).item()
             # normalize two-dimensional weight vectors
             for f in range(len(self.parameters[l])):
-                self.parameters[l][f] *= ref_point.filter_norm((l, f), order) / (self.filter_norm((l, f), order))
+                ref_norm = ref_point.filter_norm((l, f), order)
+                self.parameters[l][f] *= 0.0 if ref_norm == 0 else ref_norm / self.filter_norm((l, f), order)
 
     def model_norm(self, order=2) -> float:
         """
