@@ -125,6 +125,38 @@ unavailable historical downloads must be reported rather than replaced silently.
 are not portable to macOS. This explicit diagnostic command opts out of latest-patch selection.
 See [the feature quickstart](specs/001-supported-versions-update/quickstart.md) for validation evidence.
 
+### GPU tests
+
+`uv sync` installs a CPU-only PyTorch on Linux and Windows: on Linux because `pyproject.toml`
+pins the CPU index to keep installs small, and on Windows because PyPI's Windows wheels are
+CPU-only. On a CUDA machine, replace it with a CUDA build in the development environment. A
+CUDA build bundles its own CUDA runtime, so it needs only a recent enough NVIDIA driver, not a
+CUDA toolkit. On Linux, PyPI's build includes CUDA:
+
+```bash
+uv pip install --reinstall "torch==2.15.0" --index-url https://pypi.org/simple
+```
+
+On Windows, use PyTorch's index for a CUDA variant (`cuXXX`) that PyTorch 2.15 is built for,
+as listed on pytorch.org's "Get Started" page:
+
+```bash
+uv pip install --reinstall "torch==2.15.0" --index-url https://download.pytorch.org/whl/cuXXX
+```
+
+Then run with `--no-sync`, because a plain `uv run` re-syncs to the lockfile and restores the
+CPU build. `torch.cuda.is_available()` must print `True`, and `-k cuda` must select the CUDA
+cases rather than deselect them all:
+
+```bash
+uv run --no-sync python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
+uv run --no-sync pytest -q tests/test_devices.py -k cuda
+uv run --no-sync pytest -q
+```
+
+On Apple silicon the macOS wheel already supports MPS, so `uv run pytest` covers it as is.
+`uv sync` returns the environment to the locked CPU build.
+
 ### Required GitHub checks
 
 The maintainer configures these check names in GitHub rulesets/branch protection:
