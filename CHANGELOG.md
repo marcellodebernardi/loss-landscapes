@@ -7,6 +7,13 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Model-, layer- and filter-wise norms now take absolute parameter values before raising
+  them to the requested power. L1 and other positive odd-order norms no longer suffer
+  cancellation, negative results or domain errors for negative parameters. Normalisation
+  using these orders now uses the corrected magnitudes; default L2 results are unchanged.
+
 ## [4.0.3] - 2026-11-02
 
 ### Removed

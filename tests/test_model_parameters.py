@@ -291,13 +291,35 @@ def test_l2_norm_is_the_root_of_the_sum_of_squares(parameters):
     assert parameters.model_norm(2) == pytest.approx(expected, rel=1e-5)
 
 
-# TODO: take absolute values in the `*_norm` methods, then drop this marker.
-@pytest.mark.xfail(
-    reason="The `*_norm` methods compute pow(sum(x**order), 1/order) without taking absolute "
-    "values, so for odd orders negative parameters cancel out and the result is a signed sum "
-    "rather than a norm. Even orders, including the default of 2, are unaffected.",
-    strict=True,
-)
 def test_l1_norm_is_the_sum_of_absolute_values(parameters):
     expected = sum(float(p.abs().sum()) for p in parameters._get_parameters())
     assert parameters.model_norm(1) == pytest.approx(expected, rel=1e-5)
+
+
+@pytest.mark.parametrize("scope", ["model", "layer", "filter"])
+@pytest.mark.parametrize("order", [1, 3, 5])
+@pytest.mark.parametrize("values", [(-3.0, 4.0), (-4.0, 3.0), (-3.0, 3.0), (-3.0, -4.0), (0.0, 0.0)])
+@pytest.mark.parametrize("dtype", [torch.float32, torch.float64])
+def test_odd_order_norms_use_absolute_values(scope, order, values, dtype):
+    expected = sum(abs(value) ** order for value in values) ** (1.0 / order)
+    if scope == "model":
+        parameters = ModelParameters([torch.tensor([value], dtype=dtype) for value in values])
+        actual = parameters.model_norm(order)
+    else:
+        parameters = ModelParameters([torch.tensor([values], dtype=dtype)])
+        actual = parameters.layer_norm(0, order) if scope == "layer" else parameters.filter_norm((0, 0), order)
+
+    assert actual == pytest.approx(expected, rel=1e-5)
+
+
+@pytest.mark.parametrize("scope", ["model", "layer", "filter"])
+@pytest.mark.parametrize("order", [1, 3])
+def test_odd_order_normalization_preserves_direction_and_matches_reference(scope, order):
+    original = torch.tensor([[-3.0, 3.0], [-4.0, -3.0]])
+    direction = ModelParameters([original.clone()])
+    reference = ModelParameters([original * 2.0])
+
+    getattr(direction, f"{scope}_normalize_")(reference, order)
+
+    torch.testing.assert_close(direction[0], original * 2.0)
+    torch.testing.assert_close(reference[0], original * 2.0)
