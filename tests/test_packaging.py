@@ -31,7 +31,6 @@ IMPORTABLE_MODULES = [
     "loss_landscapes.metrics",
     "loss_landscapes.metrics.metric",
     "loss_landscapes.metrics.sl_metrics",
-    "loss_landscapes.metrics.rl_metrics",
     "loss_landscapes.model_interface.model_parameters",
     "loss_landscapes.model_interface.model_wrapper",
 ]
