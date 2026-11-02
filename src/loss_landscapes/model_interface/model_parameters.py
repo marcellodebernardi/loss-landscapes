@@ -17,31 +17,6 @@ import torch
 import torch.nn
 
 
-def _is_1d(tensor: torch.Tensor) -> bool:
-    """Whether a tensor has at most one dimension, such as a bias or a normalization layer's weight."""
-    return tensor.dim() <= 1
-
-
-def _accumulation_dtype(tensor: torch.Tensor) -> torch.dtype:
-    """
-    Returns the dtype to accumulate reductions over a tensor in: float64, or float32 on
-    devices without float64 support (MPS). Either avoids the overflow of summing float16
-    tensors of more than about 65,000 elements in their own dtype.
-    """
-    return torch.float32 if tensor.device.type == "mps" else torch.float64
-
-
-def _power_sum(tensor: torch.Tensor, order) -> float:
-    """Returns sum(abs(x) ** order) over a tensor, accumulated as by _accumulation_dtype."""
-    return torch.pow(tensor.detach().abs().to(_accumulation_dtype(tensor)), order).sum().item()
-
-
-def _dot(a: torch.Tensor, b: torch.Tensor) -> float:
-    """Returns the dot product of two tensors of equal shape, accumulated as by _accumulation_dtype."""
-    dtype = _accumulation_dtype(a)
-    return (a.detach().to(dtype) * b.detach().to(dtype)).sum().item()
-
-
 class ModelParameters:
     """
     A ModelParameters object is an abstract view of a model's optimizable parameters as a tensor. This class
@@ -436,3 +411,28 @@ def model_normalize(tensor, order) -> ModelParameters:
     new_tensor = copy.deepcopy(tensor)
     new_tensor.model_normalize_(order)
     return new_tensor
+
+
+def _is_1d(tensor: torch.Tensor) -> bool:
+    """Whether a tensor has at most one dimension, such as a bias or a normalization layer's weight."""
+    return tensor.dim() <= 1
+
+
+def _accumulation_dtype(tensor: torch.Tensor) -> torch.dtype:
+    """
+    Returns the dtype to accumulate reductions over a tensor in: float64, or float32 on
+    devices without float64 support (MPS). Either avoids the overflow of summing float16
+    tensors of more than about 65,000 elements in their own dtype.
+    """
+    return torch.float32 if tensor.device.type == "mps" else torch.float64
+
+
+def _power_sum(tensor: torch.Tensor, order) -> float:
+    """Returns sum(abs(x) ** order) over a tensor, accumulated as by _accumulation_dtype."""
+    return torch.pow(tensor.detach().abs().to(_accumulation_dtype(tensor)), order).sum().item()
+
+
+def _dot(a: torch.Tensor, b: torch.Tensor) -> float:
+    """Returns the dot product of two tensors of equal shape, accumulated as by _accumulation_dtype."""
+    dtype = _accumulation_dtype(a)
+    return (a.detach().to(dtype) * b.detach().to(dtype)).sum().item()
