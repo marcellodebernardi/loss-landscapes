@@ -25,8 +25,7 @@ PUBLIC_API = [
     "GeneralModelWrapper",
 ]
 
-# Subpackages that are expected to import cleanly. `contrib` is excluded on purpose; see
-# test_contrib_is_still_broken below.
+# Subpackages that are expected to import cleanly.
 IMPORTABLE_MODULES = [
     "loss_landscapes.main",
     "loss_landscapes.metrics",
@@ -49,29 +48,15 @@ def test_module_imports(name):
 
 
 def test_source_tree_contains_no_unexpected_top_level_modules():
-    """The importable package has exactly the four subpackages we expect.
+    """The importable package has exactly the three subpackages we expect.
 
     Inspects the source tree rather than a built artifact: under an editable install,
     `loss_landscapes.__path__` points at `src/`.
     """
-    expected = {"main", "metrics", "model_interface", "contrib"}
+    expected = {"main", "metrics", "model_interface"}
     found = {module.name for module in pkgutil.iter_modules(loss_landscapes.__path__)}
 
     assert found == expected
-
-
-# TODO: repair or delete `contrib`, then drop this marker.
-@pytest.mark.xfail(
-    reason="contrib was orphaned by the 2019-07-17 refactor: it imports "
-    "loss_landscapes.model_interface.model_interface, which no longer exists, and calls the "
-    "removed get_parameter_tensor/set_parameter_tensor API. It only appears to work for users "
-    "of the published wheel because that wheel still contains the deleted module.",
-    strict=True,
-    raises=ModuleNotFoundError,
-)
-@pytest.mark.parametrize("name", ["loss_landscapes.contrib.connecting_paths", "loss_landscapes.contrib.trajectories"])
-def test_contrib_is_still_broken(name):
-    importlib.import_module(name)
 
 
 def test_version_is_available():
