@@ -11,7 +11,7 @@ import torch
 import torch.autograd
 
 from loss_landscapes.metrics.metric import Metric
-from loss_landscapes.model_interface.model_parameters import rand_u_like
+from loss_landscapes.model_interface.model_parameters import ModelParameters, rand_u_like
 from loss_landscapes.model_interface.model_wrapper import ModelWrapper
 
 
@@ -30,7 +30,7 @@ class Loss(Metric):
 
 class LossGradient(Metric):
     """Computes the gradient of a specified loss function w.r.t. the model parameters
-    over specified input-output pairs."""
+    over specified input-output pairs, returned as a flat array in parameter order."""
 
     def __init__(self, loss_fn, inputs: torch.Tensor, target: torch.Tensor):
         super().__init__()
@@ -39,10 +39,24 @@ class LossGradient(Metric):
         self.target = target
 
     def __call__(self, model_wrapper: ModelWrapper) -> np.ndarray:
-        loss = self.loss_fn(model_wrapper.forward(self.inputs), self.target)
-        gradient = torch.autograd.grad(loss, model_wrapper.named_parameters()).detach().numpy()
-        model_wrapper.zero_grad()
-        return gradient
+        # wrap_model() disables gradient tracking so parameters can be modified in place,
+        # so enable it only for this evaluation and restore the previous state afterwards
+        parameters = list(model_wrapper.parameters())
+        previous = [p.requires_grad for p in parameters]
+        try:
+            for p in parameters:
+                p.requires_grad_(True)
+            with torch.enable_grad():
+                loss = self.loss_fn(model_wrapper.forward(self.inputs), self.target)
+                gradients = torch.autograd.grad(loss, parameters, allow_unused=True)
+        finally:
+            for p, requires_grad in zip(parameters, previous, strict=True):
+                p.requires_grad_(requires_grad)
+
+        # parameters the loss does not depend on have a zero gradient
+        return ModelParameters(
+            [torch.zeros_like(p) if g is None else g.detach() for p, g in zip(parameters, gradients, strict=True)]
+        ).as_numpy()
 
 
 class LossPerturbations(Metric):

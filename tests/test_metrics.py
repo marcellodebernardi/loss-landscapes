@@ -1,5 +1,7 @@
 """Metrics, the Metric protocol, and the model wrappers they are handed."""
 
+import copy
+
 import numpy as np
 import pytest
 import torch
@@ -147,29 +149,43 @@ def test_wrapper_named_parameters_yields_every_module_name_and_parameter(model, 
     assert all(a is e for (_, a), (_, e) in zip(actual, expected, strict=True))
 
 
-# TODO: let LossGradient keep gradients enabled, then drop this marker.
-@pytest.mark.xfail(
-    reason="wrap_model() calls requires_grad_(False) on every parameter, so nothing reached "
-    "through a wrapper is part of an autograd graph and LossGradient cannot differentiate "
-    "at all. LossGradient also passes (name, parameter) pairs to torch.autograd.grad and "
-    "calls .detach() on the tuple it returns, so all three have to be fixed before it works.",
-    strict=True,
-    raises=RuntimeError,
-)
-def test_loss_gradient_returns_a_gradient(model, data, wrapper):
+# --- LossGradient ----------------------------------------------------------
+
+
+def test_loss_gradient_matches_a_direct_evaluation(model, data, wrapper):
     inputs, target = data
+    reference = copy.deepcopy(model).requires_grad_(True)
+    torch.nn.MSELoss()(reference(inputs), target).backward()
+    expected = np.concatenate([p.grad.numpy().flatten() for p in reference.parameters()])
+
     gradient = LossGradient(torch.nn.MSELoss(), inputs, target)(wrapper)
 
     assert isinstance(gradient, np.ndarray)
+    np.testing.assert_allclose(gradient, expected, rtol=1e-6)
 
 
-def test_wrapping_makes_gradients_uncomputable(model, data, wrapper):
-    """Pin the cause of the xfail above, so fixing one defect does not mask the other.
-
-    Once requires_grad is restored this test fails, which is the signal that the
-    LossGradient xfail can be revisited.
-    """
+def test_loss_gradient_restores_gradient_tracking(model, data, wrapper):
     inputs, target = data
-    loss = torch.nn.MSELoss()(wrapper.forward(inputs), target)
+    LossGradient(torch.nn.MSELoss(), inputs, target)(wrapper)
 
-    assert not loss.requires_grad
+    assert all(not p.requires_grad and p.grad is None for p in model.parameters())
+
+
+def test_loss_gradient_works_under_no_grad(data, wrapper):
+    inputs, target = data
+    with torch.no_grad():
+        gradient = LossGradient(torch.nn.MSELoss(), inputs, target)(wrapper)
+
+    assert np.any(gradient != 0)
+
+
+def test_loss_gradient_is_zero_for_modules_the_loss_does_not_use(model, other_model, data):
+    inputs, target = data
+    wrapper = wrap_model(GeneralModelWrapper(model, [model, other_model], lambda m, x: m(x)))
+    n_used = sum(p.numel() for p in model.parameters())
+
+    gradient = LossGradient(torch.nn.MSELoss(), inputs, target)(wrapper)
+
+    assert gradient.shape == (n_used + sum(p.numel() for p in other_model.parameters()),)
+    assert np.any(gradient[:n_used] != 0)
+    assert np.all(gradient[n_used:] == 0)

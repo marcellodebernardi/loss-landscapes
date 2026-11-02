@@ -9,6 +9,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `LossGradient` now returns the gradient of the loss with respect to the model parameters as
+  a flat array in parameter order. Previously it always raised, because `wrap_model()` disables
+  gradient tracking. It now enables tracking only for its own evaluation and restores the
+  previous state afterwards, and gives a zero gradient for parameters the loss does not use.
 - `ModelWrapper.parameters()` and `named_parameters()` now yield the parameters (or
   `(name, parameter)` pairs) of every wrapped module. Previously they yielded one generator
   object per module.

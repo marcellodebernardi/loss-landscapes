@@ -54,9 +54,8 @@ fixtures use a two-layer MLP — 23 parameters across four tensors — which is 
 exercise the layer-wise and filter-wise code paths.
 
 `xfail_strict` is on, so an `xfail` that starts passing fails the build. This is
-deliberate: the suite currently pins a number of known defects with strict `xfail`
-markers, so fixing one of them makes the corresponding test fail until the marker is
-removed in the same change. When you fix a bug, delete its marker.
+deliberate: known defects are pinned with strict `xfail` markers, so fixing one of them
+makes the corresponding test fail until the marker is removed in the same change. When you fix a bug, delete its marker.
 
 Every `xfail` carries a `reason` explaining the defect. Keep that up: those markers are the
 project's bug tracker as much as the issue list is.
@@ -66,7 +65,7 @@ project's bug tracker as much as the issue list is.
 The supported matrix is PyTorch 2.15 on standard, GIL-enabled CPython 3.11–3.15.
 Linux x86-64 CPU is the verified platform; native macOS/Windows runs provide local feedback
 where upstream wheels exist. Alternative interpreters, free-threaded builds and GPU execution
-are outside this support claim. Existing numerical defects remain tracked by strict xfails.
+are outside this support claim.
 
 After development setup, provision the latest stable interpreter patches in a test-only directory:
 
