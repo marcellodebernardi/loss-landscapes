@@ -28,10 +28,13 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   raising `ZeroDivisionError`.
 - `random_plane` resamples its second direction when normalization maps it onto the first, which
   happens often when every perturbed filter is a single parameter, instead of raising
-  `ZeroDivisionError`. A direction counts as collapsed only when projection leaves nothing above
-  rounding error for the parameters' dtype, so planes through models whose filter norms differ by
-  orders of magnitude are kept. The final projection is applied twice, keeping such planes
-  orthogonal to within rounding error.
+  `ZeroDivisionError`. A direction counts as collapsed only when what projection leaves is too
+  small for the parameters' dtype to resolve, under 10 machine epsilons of its norm, so planes
+  through models whose filter norms differ by orders of magnitude are kept where the dtype
+  allows it.
+- `ModelParameters.orthogonalize_`, used by `orthogonal_to` and `random_plane`, computes its
+  subtraction in float64 (float32 on MPS) before rounding to each tensor's dtype, so nearly
+  parallel vectors keep an accurate, orthogonal remainder in low precision.
 - `random_line` and `random_plane` raise a descriptive `ValueError` when normalization leaves
   nothing to perturb, or, for `random_plane`, fewer than two dimensions, instead of
   `ZeroDivisionError`.

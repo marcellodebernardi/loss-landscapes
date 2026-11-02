@@ -201,10 +201,17 @@ class ModelParameters:
         the two still span the same plane as before. `other` is not modified. A zero `other`
         raises ZeroDivisionError because the projection onto it is undefined.
 
+        The subtraction is computed in float64 (float32 on MPS) and the result rounded to each
+        tensor's dtype. When this vector is nearly parallel to `other`, the remainder is a small
+        difference of large values, which would lose most of its precision in a low-precision dtype.
+
         :param other: vector to make this one orthogonal to
         :return: none
         """
-        self.sub_(other * (self.dot(other) / other.dot(other)))
+        coefficient = self.dot(other) / other.dot(other)
+        for mine, theirs in zip(self.parameters, other.parameters, strict=True):
+            dtype = _accumulation_dtype(mine)
+            mine.copy_(mine.to(dtype) - coefficient * theirs.to(dtype))
 
     def model_normalize_(self, ref_point: "ModelParameters", order=2, ignore_1d=False):
         """

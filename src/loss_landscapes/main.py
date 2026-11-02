@@ -268,7 +268,9 @@ def random_plane(
     a single parameter, its norms may be only approximate. A model with fewer than two
     perturbed parameters (see 'ignore_1d') has no plane through it and raises ValueError, as do
     models whose normalized directions span fewer than two dimensions, such as one whose only
-    perturbed parameters are a single nonzero single-element filter.
+    perturbed parameters are a single nonzero single-element filter. In low precision, directions
+    that are distinct but too close to tell apart reliably, such as those of a float16 model whose
+    single-element filters differ in norm by a factor of 1000, raise the same error.
 
     Directions are sampled from a standard Gaussian, as in `https://arxiv.org/abs/1712.09913v3`.
     Note that the dimensionality of the model parameters has an impact on the expected
@@ -311,12 +313,13 @@ def random_plane(
 
     # Normalisation can map the second direction onto the first: when every perturbed filter is a
     # single parameter, a normalised direction keeps only the signs of its sample, so few distinct
-    # directions exist. Projection then leaves nothing but rounding error, whose size is about the
-    # dtype's machine epsilon times the norm before projection; rescaling it would produce a
-    # meaningless direction. A second direction left within 100 epsilons of that is resampled; the
-    # attempts are capped and fail with a ValueError. A small remainder above that is a genuine
-    # direction, as when filter norms differ by orders of magnitude, and is kept.
-    collapse_tolerance = 100 * max(torch.finfo(p.dtype).eps for p in start_point.parameters)
+    # directions exist. Both directions are only accurate to the parameters' machine epsilon, so the
+    # remainder after projection has a relative error of about epsilon divided by the fraction of
+    # dir_two's norm it retains. A remainder retaining less than 10 epsilons, whose relative error
+    # would exceed 10%, is treated as collapsed and resampled; the attempts are capped and fail
+    # with a ValueError. A small remainder above that is a genuine direction, as when filter norms
+    # differ by orders of magnitude, and is kept.
+    collapse_tolerance = 10 * max(torch.finfo(p.dtype).eps for p in start_point.parameters)
     max_attempts = 20
     for _ in range(max_attempts):
         dir_two = orthogonal_to(dir_one)
@@ -339,10 +342,6 @@ def random_plane(
                     break
                 dir_two.orthogonalize_(dir_one)
                 normalize_(dir_two)
-            # Project twice: when most of dir_two is parallel to dir_one, the first projection leaves
-            # a parallel residue of rounding error that is large relative to the remainder, and the
-            # second removes it ("twice is enough" for Gram-Schmidt).
-            dir_two.orthogonalize_(dir_one)
             dir_two.orthogonalize_(dir_one)
 
             norm_after_projection = dir_two.model_norm()
@@ -352,7 +351,8 @@ def random_plane(
     else:
         raise ValueError(
             "random_plane could not find a second direction orthogonal to the first: after "
-            "normalization, the directions span fewer than two dimensions"
+            "normalization, the directions span fewer than two dimensions that the parameters' "
+            "dtype can resolve"
         )
 
     # scale to match steps and total distance

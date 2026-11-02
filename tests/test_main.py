@@ -478,6 +478,21 @@ def test_plane_directions_stay_orthogonal_when_normalization_leaves_only_signs(m
         assert cosine(one, two) == pytest.approx(0.0, abs=1e-5)
 
 
+def test_random_plane_keeps_float16_directions_that_float16_resolves(monkeypatch):
+    """A second direction that float16 can resolve must be kept, not rejected as collapsed.
+
+    Weights 1 and 1/32 are exact in float16 and leave ~6% of the second direction after
+    projection, about 60 machine epsilons.
+    """
+    metric = Loss(torch.nn.MSELoss(), torch.rand(4, 1).half(), torch.rand(4, 2).half())
+
+    for seed in range(20):
+        torch.manual_seed(seed)
+        model = _linear(1, 2, [[1.0], [1 / 32]]).half()
+        one, two = _capture_plane_directions(monkeypatch, model, metric, "filter")
+        assert cosine(one, two) == pytest.approx(0.0, abs=5 * torch.finfo(torch.float16).eps)
+
+
 def test_random_plane_rejects_directions_that_span_one_dimension():
     """One nonzero single-element filter normalizes to plus or minus one vector: there is no plane."""
     metric = Loss(torch.nn.MSELoss(), torch.rand(4, 1), torch.rand(4, 2))
