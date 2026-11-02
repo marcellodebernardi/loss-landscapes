@@ -484,3 +484,23 @@ def test_random_plane_rejects_directions_that_span_one_dimension():
 
     with pytest.raises(ValueError, match="span fewer than two dimensions"):
         loss_landscapes.random_plane(_linear(1, 2, [[1.0], [0.0]]), metric, steps=2)
+
+
+def test_random_plane_keeps_small_genuine_directions_when_filter_norms_differ(monkeypatch):
+    """Filter norms 1000 times apart leave the second direction ~0.2% of its norm after projection.
+
+    That remainder is far above rounding error, so it is a genuine direction and must be kept.
+    """
+    metric = Loss(torch.nn.MSELoss(), torch.rand(4, 1), torch.rand(4, 2))
+
+    def model():
+        layer = torch.nn.Linear(1, 2, bias=False)
+        with torch.no_grad():
+            layer.weight.copy_(torch.tensor([[1.0], [0.001]]))
+        return layer
+
+    for seed in range(20):
+        torch.manual_seed(seed)
+        one, two = _capture_plane_directions(monkeypatch, model(), metric, "filter")
+        assert cosine(one, two) == pytest.approx(0.0, abs=1e-5)
+    assert np.isfinite(loss_landscapes.random_plane(model(), metric, steps=2)).all()

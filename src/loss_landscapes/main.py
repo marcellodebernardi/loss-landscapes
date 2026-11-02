@@ -311,8 +311,12 @@ def random_plane(
 
     # Normalisation can map the second direction onto the first: when every perturbed filter is a
     # single parameter, a normalised direction keeps only the signs of its sample, so few distinct
-    # directions exist. A second direction that collapses, leaving less than 1% of its norm after
-    # projection, is resampled; the attempts are capped and fail with a ValueError.
+    # directions exist. Projection then leaves nothing but rounding error, whose size is about the
+    # dtype's machine epsilon times the norm before projection; rescaling it would produce a
+    # meaningless direction. A second direction left within 100 epsilons of that is resampled; the
+    # attempts are capped and fail with a ValueError. A small remainder above that is a genuine
+    # direction, as when filter norms differ by orders of magnitude, and is kept.
+    collapse_tolerance = 100 * max(torch.finfo(p.dtype).eps for p in start_point.parameters)
     max_attempts = 20
     for _ in range(max_attempts):
         dir_two = orthogonal_to(dir_one)
@@ -335,10 +339,14 @@ def random_plane(
                     break
                 dir_two.orthogonalize_(dir_one)
                 normalize_(dir_two)
+            # Project twice: when most of dir_two is parallel to dir_one, the first projection leaves
+            # a parallel residue of rounding error that is large relative to the remainder, and the
+            # second removes it ("twice is enough" for Gram-Schmidt).
+            dir_two.orthogonalize_(dir_one)
             dir_two.orthogonalize_(dir_one)
 
             norm_after_projection = dir_two.model_norm()
-            if norm_after_projection == 0 or norm_after_projection < 1e-2 * norm_before_projection:
+            if norm_after_projection <= collapse_tolerance * norm_before_projection:
                 continue
         break
     else:

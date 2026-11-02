@@ -28,7 +28,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   raising `ZeroDivisionError`.
 - `random_plane` resamples its second direction when normalization maps it onto the first, which
   happens often when every perturbed filter is a single parameter, instead of raising
-  `ZeroDivisionError`.
+  `ZeroDivisionError`. A direction counts as collapsed only when projection leaves nothing above
+  rounding error for the parameters' dtype, so planes through models whose filter norms differ by
+  orders of magnitude are kept. The final projection is applied twice, keeping such planes
+  orthogonal to within rounding error.
 - `random_line` and `random_plane` raise a descriptive `ValueError` when normalization leaves
   nothing to perturb, or, for `random_plane`, fewer than two dimensions, instead of
   `ZeroDivisionError`.
