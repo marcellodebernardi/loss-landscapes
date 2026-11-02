@@ -519,3 +519,23 @@ def test_random_plane_keeps_small_genuine_directions_when_filter_norms_differ(mo
         one, two = _capture_plane_directions(monkeypatch, model(), metric, "filter")
         assert cosine(one, two) == pytest.approx(0.0, abs=1e-5)
     assert np.isfinite(loss_landscapes.random_plane(model(), metric, steps=2)).all()
+
+
+def test_random_plane_precision_ignores_unperturbed_tensors():
+    """A float16 bias that ignore_1d leaves unperturbed must not loosen the float32 collapse bound."""
+
+    class Float16Offset(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.linear = _linear(1, 2, [[1.0], [0.001]])
+            self.linear.bias = None
+            self.offset = torch.nn.Parameter(torch.tensor([0.5, -1.0], dtype=torch.float16))
+
+        def forward(self, x):
+            return self.linear(x) + self.offset.float()
+
+    metric = Loss(torch.nn.MSELoss(), torch.rand(4, 1), torch.rand(4, 2))
+
+    for seed in range(20):
+        torch.manual_seed(seed)
+        assert np.isfinite(loss_landscapes.random_plane(Float16Offset(), metric, steps=2)).all()
