@@ -80,6 +80,21 @@ def test_non_model_argument_is_rejected(metric):
 
 
 @pytest.mark.parametrize("normalization", NORMALIZATIONS)
+def test_random_line_direction_has_entries_of_both_signs(model, metric, normalization):
+    """Directions are Gaussian, so the line must not move every parameter the same way.
+
+    Normalisation only rescales blocks by positive factors, so it preserves signs, and a
+    uniform [0, 1) direction would move every parameter upwards.
+    """
+    before = snapshot(model)
+
+    loss_landscapes.random_line(model, metric, distance=0.25, steps=4, normalization=normalization)
+
+    displacement = snapshot(model).as_numpy() - before.as_numpy()
+    assert (displacement > 0).any() and (displacement < 0).any()
+
+
+@pytest.mark.parametrize("normalization", NORMALIZATIONS)
 def test_random_line_travels_the_requested_distance(model, metric, normalization):
     """The line must end exactly `distance` from where it started.
 
@@ -197,18 +212,18 @@ def _capture_plane_directions(monkeypatch, model, metric, normalization, steps=4
     import loss_landscapes.main as main
 
     captured = {}
-    real_rand_u_like = main.rand_u_like
+    real_rand_n_like = main.rand_n_like
     real_orthogonal_to = main.orthogonal_to
 
-    def fake_rand_u_like(example):
-        captured["one"] = real_rand_u_like(example)
+    def fake_rand_n_like(example):
+        captured["one"] = real_rand_n_like(example)
         return captured["one"]
 
     def fake_orthogonal_to(vector):
         captured["two"] = real_orthogonal_to(vector)
         return captured["two"]
 
-    monkeypatch.setattr(main, "rand_u_like", fake_rand_u_like)
+    monkeypatch.setattr(main, "rand_n_like", fake_rand_n_like)
     monkeypatch.setattr(main, "orthogonal_to", fake_orthogonal_to)
 
     loss_landscapes.random_plane(model, metric, distance=1, steps=steps, normalization=normalization)
@@ -224,6 +239,14 @@ def test_plane_directions_are_orthogonal(monkeypatch, model, metric, normalizati
     """The grid is plotted on perpendicular axes, so the directions must be orthogonal."""
     one, two = _capture_plane_directions(monkeypatch, model, metric, normalization=normalization)
     assert cosine(one, two) == pytest.approx(0.0, abs=1e-5)
+
+
+@pytest.mark.parametrize("normalization", NORMALIZATIONS)
+def test_plane_directions_have_entries_of_both_signs(monkeypatch, model, metric, normalization):
+    """Both directions are Gaussian, not uniform on [0, 1), so neither is all-positive."""
+    one, two = _capture_plane_directions(monkeypatch, model, metric, normalization=normalization)
+    for direction in (one.as_numpy(), two.as_numpy()):
+        assert (direction > 0).any() and (direction < 0).any()
 
 
 def _block_norm_ratios(direction: ModelParameters, reference: ModelParameters, normalization: str) -> list:

@@ -352,7 +352,7 @@ def orthogonal_to(vector: ModelParameters) -> ModelParameters:
     :param vector: original vector
     :return: new vector that is orthogonal to original vector
     """
-    new_vector = rand_u_like(vector)
+    new_vector = rand_n_like(vector)
     new_vector.orthogonalize_(vector)
     return new_vector
 

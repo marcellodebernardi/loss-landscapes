@@ -9,7 +9,7 @@ import numpy as np
 import torch.nn
 
 from loss_landscapes.metrics.metric import Metric
-from loss_landscapes.model_interface.model_parameters import ModelParameters, orthogonal_to, rand_u_like
+from loss_landscapes.model_interface.model_parameters import ModelParameters, orthogonal_to, rand_n_like
 from loss_landscapes.model_interface.model_wrapper import ModelWrapper, wrap_model
 
 
@@ -109,9 +109,10 @@ def random_line(
     space, and a distance, the evaluation is computed at 'steps' points along a random
     direction, from the start point up to the maximum distance from the start point.
 
+    Directions are sampled from a standard Gaussian, as in `https://arxiv.org/abs/1712.09913v3`.
     Note that the dimensionality of the model parameters has an impact on the expected
-    length of a uniformly sampled other in parameter space. That is, the more parameters
-    a model has, the longer the distance in the random other's direction should be,
+    length of a randomly sampled direction in parameter space. That is, the more parameters
+    a model has, the longer the distance in the random direction should be,
     in order to see meaningful change in individual parameters. Normalizing the
     direction other according to the model's current parameter values, which is supported
     through the 'normalization' parameter, helps reduce the impact of the distance
@@ -142,7 +143,7 @@ def random_line(
     # obtain start point in parameter space and random direction
     # random direction is randomly sampled, then normalized, and finally scaled by distance/steps
     start_point = model_start_wrapper.get_module_parameters()
-    direction = rand_u_like(start_point)
+    direction = rand_n_like(start_point)
 
     if normalization == "model":
         direction.model_normalize_(start_point)
@@ -271,9 +272,10 @@ def random_plane(
     a single parameter, its norms may be only approximate. A model with fewer than two
     parameters has no plane through it and raises ValueError.
 
+    Directions are sampled from a standard Gaussian, as in `https://arxiv.org/abs/1712.09913v3`.
     Note that the dimensionality of the model parameters has an impact on the expected
-    length of a uniformly sampled other in parameter space. That is, the more parameters
-    a model has, the longer the distance in the random other's direction should be,
+    length of a randomly sampled direction in parameter space. That is, the more parameters
+    a model has, the longer the distance in the random direction should be,
     in order to see meaningful change in individual parameters. Normalizing the
     direction other according to the model's current parameter values, which is supported
     through the 'normalization' parameter, helps reduce the impact of the distance
@@ -304,7 +306,7 @@ def random_plane(
     start_point = model_start_wrapper.get_module_parameters()
     if start_point.numel() < 2:
         raise ValueError("random_plane requires a model with at least two parameters")
-    dir_one = rand_u_like(start_point)
+    dir_one = rand_n_like(start_point)
     dir_two = orthogonal_to(dir_one)
 
     if normalization is not None:

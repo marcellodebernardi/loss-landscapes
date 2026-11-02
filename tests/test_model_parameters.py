@@ -14,6 +14,7 @@ from hypothesis import strategies as st
 from loss_landscapes.model_interface.model_parameters import (
     ModelParameters,
     orthogonal_to,
+    rand_n_like,
     rand_u_like,
 )
 
@@ -273,6 +274,20 @@ def test_rand_u_like_is_uniform_on_unit_interval(parameters):
     sampled = rand_u_like(parameters).as_numpy()
     assert sampled.min() >= 0.0
     assert sampled.max() < 1.0
+
+
+def test_rand_n_like_preserves_shape_and_dtype(parameters):
+    sampled = rand_n_like(parameters)
+    assert len(sampled) == len(parameters)
+    for new, old in zip(sampled._get_parameters(), parameters._get_parameters()):
+        assert new.size() == old.size()
+        assert new.dtype == old.dtype
+
+
+def test_rand_n_like_is_standard_normal():
+    sampled = rand_n_like(parameters_like((100, 100), (100,))).as_numpy()
+    assert sampled.mean() == pytest.approx(0.0, abs=0.05)
+    assert sampled.std() == pytest.approx(1.0, abs=0.05)
 
 
 def test_matmul_is_explicitly_unimplemented(parameters, other_parameters):

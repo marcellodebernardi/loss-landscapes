@@ -7,6 +7,16 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [4.0.6] - 2026-11-02
+
+### Fixed
+
+- `random_line`, `random_plane` and `orthogonal_to` now sample directions from a standard
+  Gaussian, as in Li et al. (2018), instead of uniformly from [0, 1). Uniform directions had
+  only positive entries, so every direction moved all parameters the same way and two
+  independently sampled directions were strongly correlated. Results from `random_line` and
+  `random_plane` will differ from 4.0.5. `LossPerturbations` still samples uniformly.
+
 ## [4.0.5] - 2026-11-02
 
 ### Fixed
@@ -128,7 +138,8 @@ change. Each marker carries the diagnosis and a `TODO:`; grep the test suite for
 No changelog was kept before this file was introduced; see
 the git history for earlier versions.
 
-[Unreleased]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.5...HEAD
+[Unreleased]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.6...HEAD
+[4.0.6]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.5...v4.0.6
 [4.0.5]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.4...v4.0.5
 [4.0.4]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.3...v4.0.4
 [4.0.3]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.2...v4.0.3
