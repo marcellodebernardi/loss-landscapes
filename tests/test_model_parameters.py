@@ -306,19 +306,31 @@ def test_l2_norm_is_the_root_of_the_sum_of_squares(parameters):
     assert parameters.model_norm(2) == pytest.approx(expected, rel=1e-5)
 
 
-# TODO: accumulate norms in float64, then drop this marker.
-@pytest.mark.xfail(
-    reason="model_norm, layer_norm and filter_norm sum |x| ** order in the parameters' own dtype, "
-    "so for float16 tensors with more than about 65,000 elements the sum overflows to inf. "
-    "Normalisation then scales directions to zero or raises ZeroDivisionError, which breaks "
-    "random_line, random_plane and LossPerturbations for such models.",
-    strict=True,
-)
-def test_norms_do_not_overflow_for_float16_parameters():
-    parameters = ModelParameters([torch.ones(100_000, dtype=torch.float16)])
+@pytest.mark.parametrize("order", [1, 2, 3])
+def test_norms_do_not_overflow_for_float16_parameters(order):
+    """float16 tops out at 65,504, so summing 100,000 ones in float16 would overflow."""
+    parameters = ModelParameters([torch.ones(2, 100_000, dtype=torch.float16)])
+    expected = 100_000 ** (1 / order)
 
-    assert parameters.model_norm() == pytest.approx(math.sqrt(100_000))
-    assert parameters.layer_norm(0) == pytest.approx(math.sqrt(100_000))
+    assert parameters.model_norm(order) == pytest.approx(2 ** (1 / order) * expected)
+    assert parameters.layer_norm(0, order) == pytest.approx(2 ** (1 / order) * expected)
+    assert parameters.filter_norm((0, 1), order) == pytest.approx(expected)
+
+
+def test_dot_does_not_overflow_for_float16_parameters():
+    ones = ModelParameters([torch.ones(100_000, dtype=torch.float16)])
+    assert ones.dot(ones) == pytest.approx(100_000)
+
+
+def test_norms_leave_the_parameters_unchanged(parameters):
+    before = [p.clone() for p in parameters._get_parameters()]
+
+    parameters.model_norm(), parameters.layer_norm(0), parameters.filter_norm((0, 0))
+    parameters.dot(parameters)
+
+    for old, new in zip(before, parameters._get_parameters(), strict=True):
+        assert new.dtype == old.dtype
+        assert torch.equal(old, new)
 
 
 def test_l1_norm_is_the_sum_of_absolute_values(parameters):

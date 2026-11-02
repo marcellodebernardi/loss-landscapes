@@ -317,6 +317,49 @@ def test_model_normalization_preserves_the_sampled_subspace(sampler, model, metr
     np.testing.assert_allclose(normalised, unnormalised, rtol=1e-5, atol=1e-6)
 
 
+# --- low precision ---------------------------------------------------------
+
+
+@pytest.fixture
+def half_model():
+    """A float16 model with a 100,000-element weight, whose squared norm overflows float16."""
+    torch.manual_seed(0)
+    return torch.nn.Linear(1000, 100).half()
+
+
+@pytest.fixture
+def half_metric():
+    torch.manual_seed(0)
+    return Loss(torch.nn.MSELoss(), torch.rand(4, 1000).half(), torch.rand(4, 100).half())
+
+
+def _as_float64(parameters: ModelParameters) -> np.ndarray:
+    return parameters.as_numpy().astype(np.float64)
+
+
+@pytest.mark.parametrize("normalization", NORMALIZATIONS)
+def test_random_line_travels_the_requested_distance_for_float16_models(half_model, half_metric, normalization):
+    """The line must move every tensor, not just the ones whose norm does not overflow."""
+    before_tensors = [p.detach().clone() for p in half_model.parameters()]
+    before = _as_float64(snapshot(half_model))
+
+    result = loss_landscapes.random_line(half_model, half_metric, distance=0.25, steps=4, normalization=normalization)
+
+    assert np.isfinite(result).all()
+    displacement = np.linalg.norm(_as_float64(snapshot(half_model)) - before)
+    assert displacement == pytest.approx(np.linalg.norm(before) * 0.25, rel=1e-2)
+    for old, new in zip(before_tensors, half_model.parameters(), strict=True):
+        assert not torch.equal(old, new.detach())
+
+
+@pytest.mark.parametrize("normalization", NORMALIZATIONS)
+def test_random_plane_is_finite_and_not_flat_for_float16_models(half_model, half_metric, normalization):
+    result = loss_landscapes.random_plane(half_model, half_metric, distance=1, steps=3, normalization=normalization)
+
+    assert np.isfinite(result).all()
+    assert np.ptp(result) > 0
+
+
 # --- reproducibility -------------------------------------------------------
 
 

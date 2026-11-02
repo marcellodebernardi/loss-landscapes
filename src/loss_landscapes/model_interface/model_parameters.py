@@ -17,6 +17,19 @@ import torch
 import torch.nn
 
 
+def _power_sum(tensor: torch.Tensor, order) -> float:
+    """
+    Returns sum(abs(x) ** order) over a tensor, accumulated in float64. Summing in the
+    tensor's own dtype overflows for float16 tensors of more than about 65,000 elements.
+    """
+    return torch.pow(tensor.detach().abs().to(torch.float64), order).sum().item()
+
+
+def _dot(a: torch.Tensor, b: torch.Tensor) -> float:
+    """Returns the dot product of two tensors of equal shape, accumulated in float64."""
+    return (a.detach().to(torch.float64) * b.detach().to(torch.float64)).sum().item()
+
+
 class ModelParameters:
     """
     A ModelParameters object is an abstract view of a model's optimizable parameters as a tensor. This class
@@ -190,7 +203,7 @@ class ModelParameters:
         """
         param_products = []
         for idx in range(len(self.parameters)):
-            param_products.append((self.parameters[idx] * other.parameters[idx]).sum().item())
+            param_products.append(_dot(self.parameters[idx], other.parameters[idx]))
         return sum(param_products)
 
     def orthogonalize_(self, other: "ModelParameters"):
@@ -253,8 +266,8 @@ class ModelParameters:
         for l in range(len(self.parameters)):
             # normalize one-dimensional bias vectors
             if len(self.parameters[l].size()) == 1:
-                ref_norm = ref_point.parameters[l].norm(order).item()
-                self.parameters[l] *= 0.0 if ref_norm == 0 else ref_norm / self.parameters[l].norm(order).item()
+                ref_norm = ref_point.layer_norm(l, order)
+                self.parameters[l] *= 0.0 if ref_norm == 0 else ref_norm / self.layer_norm(l, order)
             # normalize two-dimensional weight vectors
             for f in range(len(self.parameters[l])):
                 ref_norm = ref_point.filter_norm((l, f), order)
@@ -270,7 +283,7 @@ class ModelParameters:
         :return: Lp norm of the model parameters
         """
         # L-n norm of model where we treat the model as a flat other
-        return math.pow(sum([torch.pow(layer.abs(), order).sum().item() for layer in self.parameters]), 1.0 / order)
+        return math.pow(sum([_power_sum(layer, order) for layer in self.parameters]), 1.0 / order)
 
     def layer_norm(self, index, order=2) -> float:
         """
@@ -283,7 +296,7 @@ class ModelParameters:
         :return: Lp norm of the selected layer
         """
         # L-n norms of layer where we treat each layer as a flat other
-        return math.pow(torch.pow(self.parameters[index].abs(), order).sum().item(), 1.0 / order)
+        return math.pow(_power_sum(self.parameters[index], order), 1.0 / order)
 
     def filter_norm(self, index, order=2) -> float:
         """
@@ -296,7 +309,7 @@ class ModelParameters:
         :return: Lp norm of the selected filter
         """
         # L-n norm of each filter where we treat each layer as a flat other
-        return math.pow(torch.pow(self.parameters[index[0]][index[1]].abs(), order).sum().item(), 1.0 / order)
+        return math.pow(_power_sum(self.parameters[index[0]][index[1]], order), 1.0 / order)
 
     def as_numpy(self) -> np.ndarray:
         """
