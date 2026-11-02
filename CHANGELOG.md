@@ -7,6 +7,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `ModelWrapper.parameters()` and `named_parameters()` now yield the parameters (or
+  `(name, parameter)` pairs) of every wrapped module. Previously they yielded one generator
+  object per module.
+
 ## [4.0.4] - 2026-11-02
 
 ### Fixed
