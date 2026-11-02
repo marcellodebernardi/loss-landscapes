@@ -46,6 +46,15 @@ print(loss_values.shape)  # (20,)
 Sampling modifies the supplied model's parameters and disables its parameter gradients by default.
 Use `deepcopy_model=True`, as above, to evaluate a copy and preserve the supplied model.
 
+To run on a GPU, put the model on it as usual; the library computes on whichever device each
+parameter is on, and returns its results as Python floats or NumPy arrays. A metric's inputs and
+targets must be on the same device as the model:
+
+```python
+model = model.to("cuda")  # or "mps"
+metric = Loss(torch.nn.MSELoss(), inputs.to("cuda"), targets.to("cuda"))
+```
+
 ## 1. What is a Loss Landscape?
 
 For a neural network with `n` parameters, let `L : R^n -> R` map its parameter vector to a loss
@@ -156,8 +165,9 @@ The library supports the following combinations:
 | 2.15 | 3.11, 3.12, 3.13, 3.14, 3.15 |
 
 Compatibility is tested on Linux x86-64 CPU with standard, GIL-enabled CPython, using the latest
-compatible stable patches in these series. GPU execution, free-threaded builds and alternative
-interpreters are not covered by these checks.
+compatible stable patches in these series. CUDA and Apple MPS GPUs are supported; device tests run
+on every device available to the machine running them, so CI covers CPU only. Free-threaded builds
+and alternative interpreters are not covered by these checks.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for compatibility checks and platform prerequisites.
 

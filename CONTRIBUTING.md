@@ -64,8 +64,10 @@ project's bug tracker as much as the issue list is.
 
 The supported matrix is PyTorch 2.15 on standard, GIL-enabled CPython 3.11–3.15.
 Linux x86-64 CPU is the verified platform; native macOS/Windows runs provide local feedback
-where upstream wheels exist. Alternative interpreters, free-threaded builds and GPU execution
-are outside this support claim.
+where upstream wheels exist. CUDA and Apple MPS execution is supported, but CI has no GPU:
+`tests/test_devices.py` runs on every device `available_devices()` in `tests/conftest.py` finds,
+so run the suite on a GPU machine before releasing device-related changes. Alternative
+interpreters and free-threaded builds are outside this support claim.
 
 After development setup, provision the latest stable interpreter patches in a test-only directory:
 

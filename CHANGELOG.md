@@ -7,6 +7,22 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [4.1.0] - 2026-11-02
+
+### Added
+
+- GPU support. Everything now runs on the device each model parameter is on, including CUDA and
+  Apple MPS, and results are returned in host memory as before. Previously `random_line`,
+  `random_plane` and `LossPerturbations` created their random directions on the CPU and failed
+  with a device mismatch, and `LossGradient` failed converting device tensors to NumPy.
+  Metric inputs and targets must be on the model's device.
+
+### Fixed
+
+- `rand_u_like` and `rand_n_like` now give each tensor its example tensor's own dtype, rather
+  than the dtype of the first one.
+- Parameter norms and dot products on MPS, which has no float64, are accumulated in float32.
+
 ## [4.0.8] - 2026-11-02
 
 ### Fixed
@@ -169,7 +185,8 @@ change. Each marker carries the diagnosis and a `TODO:`; grep the test suite for
 No changelog was kept before this file was introduced; see
 the git history for earlier versions.
 
-[Unreleased]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.8...HEAD
+[Unreleased]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.1.0...HEAD
+[4.1.0]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.8...v4.1.0
 [4.0.8]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.7...v4.0.8
 [4.0.7]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.6...v4.0.7
 [4.0.6]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.5...v4.0.6
