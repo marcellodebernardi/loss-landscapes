@@ -130,6 +130,18 @@ def test_loss_perturbations_restores_the_parameters_when_the_loss_raises(quadrat
         assert torch.allclose(old, new, rtol=0, atol=1e-12)
 
 
+def test_loss_perturbations_are_not_zero_for_float16_models():
+    """The step's norm is taken over a 100,000-element float16 weight, which must not overflow."""
+    torch.manual_seed(0)
+    model = torch.nn.Linear(1000, 100).half()
+    inputs, target = torch.rand(4, 1000).half(), torch.rand(4, 100).half()
+
+    deltas = LossPerturbations(torch.nn.MSELoss(), inputs, target, n_directions=3, alpha=1.0)(wrap_model(model))
+
+    assert np.isfinite(deltas).all()
+    assert np.any(deltas != 0)
+
+
 def test_loss_perturbations_curvature_is_non_negative_for_a_convex_loss(quadratic):
     assert (_perturbations(quadratic, alpha=0.1).sum(axis=1) >= -1e-12).all()
 

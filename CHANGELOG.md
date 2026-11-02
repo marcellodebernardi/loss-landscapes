@@ -7,6 +7,17 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [4.0.8] - 2026-11-02
+
+### Fixed
+
+- Parameter norms and dot products are now accumulated in float64, whatever the parameters'
+  dtype. Previously they were summed in the parameters' own precision, so for float16 models
+  with tensors of more than about 65,000 elements the sum overflowed. `random_line` and
+  `random_plane` then raised `ZeroDivisionError` or silently left the overflowing tensors
+  unperturbed, and `LossPerturbations` returned only zeros. Results for float32 models may
+  differ in the last few digits.
+
 ## [4.0.7] - 2026-11-02
 
 ### Fixed
@@ -158,7 +169,8 @@ change. Each marker carries the diagnosis and a `TODO:`; grep the test suite for
 No changelog was kept before this file was introduced; see
 the git history for earlier versions.
 
-[Unreleased]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.7...HEAD
+[Unreleased]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.8...HEAD
+[4.0.8]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.7...v4.0.8
 [4.0.7]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.6...v4.0.7
 [4.0.6]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.5...v4.0.6
 [4.0.5]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.4...v4.0.5
