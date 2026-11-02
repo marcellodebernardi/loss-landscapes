@@ -56,6 +56,21 @@ def test_norms_and_dot_match_cpu(device, parameters, other_parameters):
     assert moved.dot(other) == pytest.approx(parameters.dot(other_parameters), rel=1e-6)
 
 
+@pytest.mark.parametrize("order", [1, 2, 3])
+def test_float16_norms_and_dot_do_not_overflow(device, order):
+    """float16 tops out at 65,504, so summing 100,000 ones in float16 would overflow.
+
+    MPS has no float64 and accumulates in float32, so this covers that path separately.
+    """
+    ones = ModelParameters([torch.ones(2, 100_000, dtype=torch.float16, device=device)])
+    row = 100_000 ** (1 / order)
+
+    assert ones.model_norm(order) == pytest.approx(2 ** (1 / order) * row)
+    assert ones.layer_norm(0, order) == pytest.approx(2 ** (1 / order) * row)
+    assert ones.filter_norm((0, 1), order) == pytest.approx(row)
+    assert ones.dot(ones) == pytest.approx(200_000)
+
+
 def test_as_numpy_copies_to_host_memory(device, parameters):
     moved = ModelParameters([p.to(device) for p in parameters])
     np.testing.assert_array_equal(moved.as_numpy(), parameters.as_numpy())

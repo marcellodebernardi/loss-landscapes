@@ -46,13 +46,16 @@ print(loss_values.shape)  # (20,)
 Sampling modifies the supplied model's parameters and disables its parameter gradients by default.
 Use `deepcopy_model=True`, as above, to evaluate a copy and preserve the supplied model.
 
-To run on a GPU, put the model on it as usual; the library computes on whichever device each
-parameter is on, and returns its results as Python floats or NumPy arrays. A metric's inputs and
-targets must be on the same device as the model:
+To run on a GPU, put the models on it as usual; the library computes on whichever device each
+parameter is on, and returns its results as Python floats or NumPy arrays. Every model passed to
+a function, and a metric's inputs and targets, must be on the same device. For the example above:
 
 ```python
-model = model.to("cuda")  # or "mps"
-metric = Loss(torch.nn.MSELoss(), inputs.to("cuda"), targets.to("cuda"))
+device = "cuda"  # or "mps" on Apple silicon
+model, other_model = model.to(device), other_model.to(device)
+metric = Loss(torch.nn.MSELoss(), inputs.to(device), targets.to(device))
+
+loss_values = linear_interpolation(model, other_model, metric, steps=20, deepcopy_model=True)
 ```
 
 ## 1. What is a Loss Landscape?
