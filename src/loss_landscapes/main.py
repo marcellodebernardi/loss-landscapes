@@ -318,8 +318,9 @@ def random_plane(
     # dir_two's norm it retains. A remainder retaining less than 10 epsilons, whose relative error
     # would exceed 10%, is treated as collapsed and resampled; the attempts are capped and fail
     # with a ValueError. A small remainder above that is a genuine direction, as when filter norms
-    # differ by orders of magnitude, and is kept.
-    collapse_tolerance = 10 * max(torch.finfo(p.dtype).eps for p in start_point.parameters)
+    # differ by orders of magnitude, and is kept. Only the perturbed tensors, those nonzero in
+    # dir_one, set the precision: tensors left unperturbed by ignore_1d or zero normalisation do not.
+    collapse_tolerance = 10 * max(torch.finfo(p.dtype).eps for p in dir_one.parameters if p.any())
     max_attempts = 20
     for _ in range(max_attempts):
         dir_two = orthogonal_to(dir_one)
