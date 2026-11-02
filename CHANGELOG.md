@@ -7,6 +7,16 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [4.2.0] - 2026-11-02
+
+### Removed
+
+- `loss_landscapes.metrics.ExpectedReturnMetric` and the `rl_metrics` module. It had not worked
+  since the 2019 refactor: it called the model wrapper it was given, which is not callable, and
+  it used the pre-0.26 Gym API, so it also failed with Gymnasium. Reinforcement learning remains
+  possible with a custom `Metric` and `GeneralModelWrapper`, and built-in support is planned for
+  a later release.
+
 ## [4.1.0] - 2026-11-02
 
 ### Added
@@ -185,7 +195,8 @@ change. Each marker carries the diagnosis and a `TODO:`; grep the test suite for
 No changelog was kept before this file was introduced; see
 the git history for earlier versions.
 
-[Unreleased]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.1.0...HEAD
+[Unreleased]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.2.0...HEAD
+[4.2.0]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.1.0...v4.2.0
 [4.1.0]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.8...v4.1.0
 [4.0.8]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.7...v4.0.8
 [4.0.7]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.6...v4.0.7
