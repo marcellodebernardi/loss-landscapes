@@ -24,6 +24,14 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   only the sign of the random direction and set each element's magnitude to that of the
   corresponding parameter. With `ignore_1d=False`, such tensors are now normalized as a whole, as
   layer normalization does. Filter normalization of 0-D parameters no longer raises `TypeError`.
+- Layer and filter normalization leave a block that is zero in the direction at zero, instead of
+  raising `ZeroDivisionError`.
+- `random_plane` resamples its second direction when normalization maps it onto the first, which
+  happens often when every perturbed filter is a single parameter, instead of raising
+  `ZeroDivisionError`.
+- `random_line` and `random_plane` raise a descriptive `ValueError` when normalization leaves
+  nothing to perturb, or, for `random_plane`, fewer than two dimensions, instead of
+  `ZeroDivisionError`.
 
 ### Changed
 

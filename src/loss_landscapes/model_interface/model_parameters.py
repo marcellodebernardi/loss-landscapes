@@ -235,7 +235,8 @@ class ModelParameters:
         In-place layer-wise normalization of the tensor.
 
         A layer whose reference norm is zero, such as a zero-initialised bias, is set to zero
-        without dividing by its own norm, so normalizing again leaves it at zero.
+        without dividing by its own norm, so normalizing again leaves it at zero. A layer that is
+        zero in this vector has no direction to scale and stays zero.
 
         :param ref_point: use this model's layer norms, if given
         :param order: norm order, e.g. 2 for L2 norm
@@ -247,8 +248,7 @@ class ModelParameters:
             if ignore_1d and _is_1d(parameter):
                 parameter.zero_()
                 continue
-            ref_norm = ref_point.layer_norm(layer_idx, order)
-            parameter *= 0.0 if ref_norm == 0 else ref_norm / self.layer_norm(layer_idx, order)
+            parameter *= _block_scale(ref_point.layer_norm(layer_idx, order), self.layer_norm(layer_idx, order))
 
     def filter_normalize_(self, ref_point: "ModelParameters", order=2, ignore_1d=False):
         """
@@ -259,7 +259,8 @@ class ModelParameters:
         zero (ignore_1d) or normalized as a whole, as by layer_normalize_.
 
         A filter or bias vector whose reference norm is zero is set to zero without dividing by
-        its own norm, so normalizing again leaves it at zero.
+        its own norm, so normalizing again leaves it at zero. One that is zero in this vector has no
+        direction to scale and stays zero.
 
         :param ref_point: use this model's filter norms, if given
         :param order: norm order, e.g. 2 for L2 norm
@@ -271,12 +272,11 @@ class ModelParameters:
                 if ignore_1d:
                     self.parameters[l].zero_()
                 else:
-                    ref_norm = ref_point.layer_norm(l, order)
-                    self.parameters[l] *= 0.0 if ref_norm == 0 else ref_norm / self.layer_norm(l, order)
+                    self.parameters[l] *= _block_scale(ref_point.layer_norm(l, order), self.layer_norm(l, order))
                 continue
             for f in range(len(self.parameters[l])):
-                ref_norm = ref_point.filter_norm((l, f), order)
-                self.parameters[l][f] *= 0.0 if ref_norm == 0 else ref_norm / self.filter_norm((l, f), order)
+                scale = _block_scale(ref_point.filter_norm((l, f), order), self.filter_norm((l, f), order))
+                self.parameters[l][f] *= scale
 
     def model_norm(self, order=2) -> float:
         """
@@ -436,3 +436,11 @@ def _dot(a: torch.Tensor, b: torch.Tensor) -> float:
     """Returns the dot product of two tensors of equal shape, accumulated as by _accumulation_dtype."""
     dtype = _accumulation_dtype(a)
     return (a.detach().to(dtype) * b.detach().to(dtype)).sum().item()
+
+
+def _block_scale(ref_norm: float, own_norm: float) -> float:
+    """
+    Returns the factor that gives a block of a direction the reference block's norm: zero if the
+    reference block is zero, and zero (leaving the block at zero) if the direction's block is zero.
+    """
+    return 0.0 if ref_norm == 0 or own_norm == 0 else ref_norm / own_norm

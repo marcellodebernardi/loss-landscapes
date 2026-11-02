@@ -149,9 +149,7 @@ def random_line(
     # random direction is randomly sampled, then normalized, and finally scaled by distance/steps
     start_point = model_start_wrapper.get_module_parameters()
     normalize_ = _normalizer(normalization, start_point, ignore_1d, "random_line", 1)
-    direction = rand_n_like(start_point)
-    if normalize_ is not None:
-        normalize_(direction)
+    direction = _normalized_direction(start_point, normalize_, "random_line")
 
     direction.mul_(((start_point.model_norm() * distance) / steps) / direction.model_norm())
 
@@ -268,7 +266,9 @@ def random_plane(
     second is normalized to within a small tolerance, because making it orthogonal to the
     first perturbs its layer or filter norms; for models in which many layers or filters hold
     a single parameter, its norms may be only approximate. A model with fewer than two
-    perturbed parameters (see 'ignore_1d') has no plane through it and raises ValueError.
+    perturbed parameters (see 'ignore_1d') has no plane through it and raises ValueError, as do
+    models whose normalized directions span fewer than two dimensions, such as one whose only
+    perturbed parameters are a single nonzero single-element filter.
 
     Directions are sampled from a standard Gaussian, as in `https://arxiv.org/abs/1712.09913v3`.
     Note that the dimensionality of the model parameters has an impact on the expected
@@ -307,28 +307,45 @@ def random_plane(
 
     start_point = model_start_wrapper.get_module_parameters()
     normalize_ = _normalizer(normalization, start_point, ignore_1d, "random_plane", 2)
-    dir_one = rand_n_like(start_point)
-    dir_two = orthogonal_to(dir_one)
+    dir_one = _normalized_direction(start_point, normalize_, "random_plane")
 
-    if normalize_ is not None:
-        normalize_(dir_one)
-        normalize_(dir_two)
-
-        # Layer- and filter-wise normalisation rescale blocks of a direction by different factors,
-        # which does not preserve angles, so the directions are no longer orthogonal. Alternate
-        # projecting dir_two onto the orthogonal complement of dir_one and renormalising it until
-        # the pair is orthogonal to within tolerance; this takes a few iterations for typical
-        # models. It can stall when many blocks hold a single element, so the loop is capped, and
-        # it always ends on a projection so that orthogonality holds even when the cap is reached.
-        tolerance = 1e-6
-        max_iterations = 20
-        for _ in range(max_iterations):
-            cosine = dir_one.dot(dir_two) / (dir_one.model_norm() * dir_two.model_norm())
-            if abs(cosine) < tolerance:
-                break
-            dir_two.orthogonalize_(dir_one)
+    # Normalisation can map the second direction onto the first: when every perturbed filter is a
+    # single parameter, a normalised direction keeps only the signs of its sample, so few distinct
+    # directions exist. A second direction that collapses, leaving less than 1% of its norm after
+    # projection, is resampled; the attempts are capped and fail with a ValueError.
+    max_attempts = 20
+    for _ in range(max_attempts):
+        dir_two = orthogonal_to(dir_one)
+        if normalize_ is not None:
             normalize_(dir_two)
-        dir_two.orthogonalize_(dir_one)
+            norm_before_projection = dir_two.model_norm()
+
+            # Layer- and filter-wise normalisation rescale blocks of a direction by different
+            # factors, which does not preserve angles, so the directions are no longer orthogonal.
+            # Alternate projecting dir_two onto the orthogonal complement of dir_one and
+            # renormalising it until the pair is orthogonal to within tolerance; this takes a few
+            # iterations for typical models. It can stall when many blocks hold a single element, so
+            # the loop is capped, and it always ends on a projection so that orthogonality holds
+            # even when the cap is reached.
+            tolerance = 1e-6
+            max_iterations = 20
+            for _ in range(max_iterations):
+                norm_two = dir_two.model_norm()
+                if norm_two == 0 or abs(dir_one.dot(dir_two)) < tolerance * dir_one.model_norm() * norm_two:
+                    break
+                dir_two.orthogonalize_(dir_one)
+                normalize_(dir_two)
+            dir_two.orthogonalize_(dir_one)
+
+            norm_after_projection = dir_two.model_norm()
+            if norm_after_projection == 0 or norm_after_projection < 1e-2 * norm_before_projection:
+                continue
+        break
+    else:
+        raise ValueError(
+            "random_plane could not find a second direction orthogonal to the first: after "
+            "normalization, the directions span fewer than two dimensions"
+        )
 
     # scale to match steps and total distance
     dir_one.mul_(((start_point.model_norm() * distance) / steps) / dir_one.model_norm())
@@ -392,6 +409,25 @@ def _normalizer(
     if normalization is None:
         return _zero_1d_ if ignore_1d else None
     raise AttributeError("Unsupported normalization argument. Supported values are model, layer, and filter")
+
+
+def _normalized_direction(
+    start_point: ModelParameters, normalize_: typing.Optional[typing.Callable[[ModelParameters], None]], caller: str
+) -> ModelParameters:
+    """
+    Samples a Gaussian direction like start_point and normalizes it, raising ValueError if
+    normalization leaves nothing to perturb: every parameter is excluded by ignore_1d or lies in a
+    layer or filter whose parameters are all zero.
+    """
+    direction = rand_n_like(start_point)
+    if normalize_ is not None:
+        normalize_(direction)
+    if direction.model_norm() == 0:
+        raise ValueError(
+            f"{caller} has no parameters to perturb after normalization: each is excluded by ignore_1d "
+            "or lies in a layer or filter whose parameters are all zero (try ignore_1d=False)"
+        )
+    return direction
 
 
 def _zero_1d_(direction: ModelParameters):

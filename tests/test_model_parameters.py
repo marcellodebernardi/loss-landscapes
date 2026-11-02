@@ -182,6 +182,20 @@ def test_normalize_maps_zero_reference_blocks_to_zero_repeatedly(normalization):
         assert direction.layer_norm(0) == pytest.approx(5.0)
 
 
+@pytest.mark.parametrize("normalization", ["layer", "filter"])
+def test_normalize_leaves_zero_blocks_of_the_direction_at_zero(normalization):
+    """A zero block has no direction to scale, so it stays zero instead of dividing by zero."""
+    reference = ModelParameters([torch.tensor([[3.0, 4.0], [1.0, 1.0]]), torch.tensor([1.0, 2.0])])
+    direction = ModelParameters([torch.tensor([[0.0, 0.0], [1.0, 2.0]]), torch.tensor([0.0, 0.0])])
+
+    getattr(direction, f"{normalization}_normalize_")(reference)
+
+    torch.testing.assert_close(direction[1], torch.zeros(2))
+    if normalization == "filter":
+        torch.testing.assert_close(direction[0][0], torch.zeros(2))
+        assert direction.filter_norm((0, 1)) == pytest.approx(reference.filter_norm((0, 1)))
+
+
 def test_model_normalize_gives_the_reference_model_norm(parameters):
     direction = rand_u_like(parameters)
     direction.model_normalize_(parameters)

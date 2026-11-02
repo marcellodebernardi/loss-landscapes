@@ -440,3 +440,47 @@ def test_plane_directions_are_orthogonal_when_ignoring_1d_tensors(monkeypatch, m
     """Zeroing 1-D tensors changes the angle between the directions, which must be corrected."""
     one, two = _capture_plane_directions(monkeypatch, model, metric, normalization=normalization, ignore_1d=True)
     assert cosine(one, two) == pytest.approx(0.0, abs=1e-5)
+
+
+def _linear(n_in, n_out, weight, bias=None):
+    model = torch.nn.Linear(n_in, n_out)
+    with torch.no_grad():
+        model.weight.copy_(torch.tensor(weight))
+        if bias is not None:
+            model.bias.copy_(torch.tensor(bias))
+    return model
+
+
+@pytest.mark.parametrize("sampler", [loss_landscapes.random_line, loss_landscapes.random_plane])
+def test_zero_weights_with_ignored_biases_leave_nothing_to_perturb(sampler):
+    """Filter normalization zeroes zero filters and, by default, biases, leaving no direction."""
+    metric = Loss(torch.nn.MSELoss(), torch.rand(4, 2), torch.rand(4, 2))
+
+    def model():
+        return _linear(2, 2, [[0.0, 0.0], [0.0, 0.0]], [0.5, -1.0])
+
+    with pytest.raises(ValueError, match="no parameters to perturb after normalization"):
+        sampler(model(), metric, steps=2)
+    assert np.isfinite(sampler(model(), metric, steps=2, ignore_1d=False)).all()
+
+
+def test_plane_directions_stay_orthogonal_when_normalization_leaves_only_signs(monkeypatch):
+    """Normalised directions that coincide are resampled, not collapsed to zero.
+
+    Single-element filters keep only the signs of a sample, so normalised directions often coincide.
+    """
+    metric = Loss(torch.nn.MSELoss(), torch.rand(4, 1), torch.rand(4, 2))
+
+    for seed in range(50):
+        torch.manual_seed(seed)
+        one, two = _capture_plane_directions(monkeypatch, _linear(1, 2, [[1.0], [1.0]]), metric, "filter")
+        assert two.model_norm() > 0
+        assert cosine(one, two) == pytest.approx(0.0, abs=1e-5)
+
+
+def test_random_plane_rejects_directions_that_span_one_dimension():
+    """One nonzero single-element filter normalizes to plus or minus one vector: there is no plane."""
+    metric = Loss(torch.nn.MSELoss(), torch.rand(4, 1), torch.rand(4, 2))
+
+    with pytest.raises(ValueError, match="span fewer than two dimensions"):
+        loss_landscapes.random_plane(_linear(1, 2, [[1.0], [0.0]]), metric, steps=2)
