@@ -17,6 +17,11 @@ import torch
 import torch.nn
 
 
+def _is_1d(tensor: torch.Tensor) -> bool:
+    """Whether a tensor has at most one dimension, such as a bias or a normalization layer's weight."""
+    return tensor.dim() <= 1
+
+
 def _accumulation_dtype(tensor: torch.Tensor) -> torch.dtype:
     """
     Returns the dtype to accumulate reductions over a tensor in: float64, or float32 on
@@ -226,7 +231,7 @@ class ModelParameters:
         """
         self.sub_(other * (self.dot(other) / other.dot(other)))
 
-    def model_normalize_(self, ref_point: "ModelParameters", order=2):
+    def model_normalize_(self, ref_point: "ModelParameters", order=2, ignore_1d=False):
         """
         Rescale this vector in place to match the reference model's norm.
 
@@ -237,13 +242,20 @@ class ModelParameters:
 
         :param ref_point: model parameters whose norm sets the target magnitude
         :param order: norm order, e.g. 2 for L2 norm
+        :param ignore_1d: set tensors with at most one dimension, such as biases, to zero, and
+            take both norms over the remaining tensors
         :return: none
         """
-        scale = ref_point.model_norm(order) / self.model_norm(order)
-        for parameter in self.parameters:
-            parameter *= scale
 
-    def layer_normalize_(self, ref_point: "ModelParameters", order=2):
+        def norm(vector: "ModelParameters") -> float:
+            kept = [p for p in vector.parameters if not (ignore_1d and _is_1d(p))]
+            return math.pow(sum(_power_sum(p, order) for p in kept), 1.0 / order)
+
+        scale = norm(ref_point) / norm(self)
+        for parameter in self.parameters:
+            parameter *= 0.0 if ignore_1d and _is_1d(parameter) else scale
+
+    def layer_normalize_(self, ref_point: "ModelParameters", order=2, ignore_1d=False):
         """
         In-place layer-wise normalization of the tensor.
 
@@ -252,30 +264,41 @@ class ModelParameters:
 
         :param ref_point: use this model's layer norms, if given
         :param order: norm order, e.g. 2 for L2 norm
+        :param ignore_1d: set tensors with at most one dimension, such as biases, to zero
         :return: none
         """
         # in-place normalize each parameter
         for layer_idx, parameter in enumerate(self.parameters, 0):
+            if ignore_1d and _is_1d(parameter):
+                parameter.zero_()
+                continue
             ref_norm = ref_point.layer_norm(layer_idx, order)
             parameter *= 0.0 if ref_norm == 0 else ref_norm / self.layer_norm(layer_idx, order)
 
-    def filter_normalize_(self, ref_point: "ModelParameters", order=2):
+    def filter_normalize_(self, ref_point: "ModelParameters", order=2, ignore_1d=False):
         """
         In-place filter-wise normalization of the tensor.
+
+        A filter is a slice along a tensor's first dimension. A tensor with at most one dimension,
+        such as a bias, has no filters, since each would be a single element: it is either set to
+        zero (ignore_1d) or normalized as a whole, as by layer_normalize_.
 
         A filter or bias vector whose reference norm is zero is set to zero without dividing by
         its own norm, so normalizing again leaves it at zero.
 
         :param ref_point: use this model's filter norms, if given
         :param order: norm order, e.g. 2 for L2 norm
+        :param ignore_1d: set tensors with at most one dimension to zero, as Li et al. (2018) do
         :return: none
         """
         for l in range(len(self.parameters)):
-            # normalize one-dimensional bias vectors
-            if len(self.parameters[l].size()) == 1:
-                ref_norm = ref_point.layer_norm(l, order)
-                self.parameters[l] *= 0.0 if ref_norm == 0 else ref_norm / self.layer_norm(l, order)
-            # normalize two-dimensional weight vectors
+            if _is_1d(self.parameters[l]):
+                if ignore_1d:
+                    self.parameters[l].zero_()
+                else:
+                    ref_norm = ref_point.layer_norm(l, order)
+                    self.parameters[l] *= 0.0 if ref_norm == 0 else ref_norm / self.layer_norm(l, order)
+                continue
             for f in range(len(self.parameters[l])):
                 ref_norm = ref_point.filter_norm((l, f), order)
                 self.parameters[l][f] *= 0.0 if ref_norm == 0 else ref_norm / self.filter_norm((l, f), order)

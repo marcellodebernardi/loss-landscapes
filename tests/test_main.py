@@ -193,7 +193,7 @@ def test_deepcopy_model_controls_whether_the_input_is_mutated(model, metric, dee
 # --- orthogonality of the plane directions ---------------------------------
 
 
-def _capture_plane_directions(monkeypatch, model, metric, normalization, steps=4):
+def _capture_plane_directions(monkeypatch, model, metric, normalization, steps=4, ignore_1d=None):
     """Grab the two direction vectors random_plane builds.
 
     They are mutated in place by the scaling that follows, so the captured references
@@ -205,6 +205,7 @@ def _capture_plane_directions(monkeypatch, model, metric, normalization, steps=4
         metric: metric to evaluate at each grid point.
         normalization: normalization passed through to random_plane.
         steps: grid resolution.
+        ignore_1d: ignore_1d passed through to random_plane.
 
     Returns:
         The two direction vectors, as they stood after random_plane finished.
@@ -226,7 +227,9 @@ def _capture_plane_directions(monkeypatch, model, metric, normalization, steps=4
     monkeypatch.setattr(main, "rand_n_like", fake_rand_n_like)
     monkeypatch.setattr(main, "orthogonal_to", fake_orthogonal_to)
 
-    loss_landscapes.random_plane(model, metric, distance=1, steps=steps, normalization=normalization)
+    loss_landscapes.random_plane(
+        model, metric, distance=1, steps=steps, normalization=normalization, ignore_1d=ignore_1d
+    )
     return captured["one"], captured["two"]
 
 
@@ -255,9 +258,7 @@ def _block_norm_ratios(direction: ModelParameters, reference: ModelParameters, n
         return [direction.layer_norm(i) / reference.layer_norm(i) for i in range(len(reference))]
     ratios = []
     for i, parameter in enumerate(reference):
-        if parameter.dim() == 1:
-            ratios.append(direction[i].norm().item() / parameter.norm().item())
-        else:
+        if parameter.dim() > 1:
             ratios.extend(direction.filter_norm((i, f)) / reference.filter_norm((i, f)) for f in range(len(parameter)))
     return ratios
 
@@ -274,6 +275,8 @@ def test_plane_directions_keep_their_normalization(monkeypatch, model, metric, n
     for direction in (one, two):
         ratios = _block_norm_ratios(direction, start, normalization)
         assert ratios == pytest.approx([ratios[0]] * len(ratios), rel=1e-4)
+        if normalization == "filter":  # 1-D tensors are left unperturbed by default
+            assert all(not direction[i].any() for i, p in enumerate(start) if p.dim() <= 1)
 
 
 def test_plane_directions_are_orthogonal_when_normalization_cannot_converge(monkeypatch):
@@ -339,7 +342,10 @@ def _as_float64(parameters: ModelParameters) -> np.ndarray:
 
 @pytest.mark.parametrize("normalization", NORMALIZATIONS)
 def test_random_line_travels_the_requested_distance_for_float16_models(half_model, half_metric, normalization):
-    """The line must move every tensor, not just the ones whose norm does not overflow."""
+    """The line must move every tensor it perturbs, not just the ones whose norm does not overflow.
+
+    Filter normalization leaves 1-D tensors unperturbed by default, as in Li et al. (2018).
+    """
     before_tensors = [p.detach().clone() for p in half_model.parameters()]
     before = _as_float64(snapshot(half_model))
 
@@ -349,7 +355,7 @@ def test_random_line_travels_the_requested_distance_for_float16_models(half_mode
     displacement = np.linalg.norm(_as_float64(snapshot(half_model)) - before)
     assert displacement == pytest.approx(np.linalg.norm(before) * 0.25, rel=1e-2)
     for old, new in zip(before_tensors, half_model.parameters(), strict=True):
-        assert not torch.equal(old, new.detach())
+        assert torch.equal(old, new.detach()) == (normalization == "filter" and old.dim() <= 1)
 
 
 @pytest.mark.parametrize("normalization", NORMALIZATIONS)
@@ -377,3 +383,60 @@ def snapshot_model(model):
     import copy
 
     return copy.deepcopy(model)
+
+
+# --- ignore_1d -------------------------------------------------------------
+
+
+def _moved_tensors(model, sampler, **kwargs) -> list:
+    """Run a sampler on the model and report, per parameter tensor, whether it moved."""
+    before = [p.detach().clone() for p in model.parameters()]
+    inputs, targets = torch.rand(8, 4), torch.rand(8, 2)
+    sampler(model, Loss(torch.nn.MSELoss(), inputs, targets), steps=3, **kwargs)
+    return [not torch.equal(old, new.detach()) for old, new in zip(before, model.parameters(), strict=True)]
+
+
+@pytest.mark.parametrize("sampler", [loss_landscapes.random_line, loss_landscapes.random_plane])
+@pytest.mark.parametrize(
+    ("normalization", "ignore_1d", "biases_move"),
+    [
+        ("filter", None, False),
+        ("filter", False, True),
+        ("layer", None, True),
+        ("layer", True, False),
+        ("model", None, True),
+        ("model", True, False),
+        (None, None, True),
+        (None, True, False),
+    ],
+)
+def test_ignore_1d_decides_whether_1d_tensors_move(model, sampler, normalization, ignore_1d, biases_move):
+    """By default only filter normalization leaves 1-D tensors in place, as in Li et al. (2018)."""
+    moved = _moved_tensors(model, sampler, normalization=normalization, ignore_1d=ignore_1d)
+
+    for p, did_move in zip(model.parameters(), moved, strict=True):
+        assert did_move == (biases_move or p.dim() > 1)
+
+
+@pytest.mark.parametrize("sampler", [loss_landscapes.random_line, loss_landscapes.random_plane])
+def test_ignore_1d_rejects_models_with_nothing_left_to_perturb(sampler):
+    class BiasOnly(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.bias = torch.nn.Parameter(torch.tensor([0.5, -1.0]))
+
+        def forward(self, x):
+            return x + self.bias
+
+    metric = Loss(torch.nn.MSELoss(), torch.rand(4, 2), torch.rand(4, 2))
+
+    with pytest.raises(ValueError, match="ignore_1d"):
+        sampler(BiasOnly(), metric, steps=2)
+    assert np.isfinite(sampler(BiasOnly(), metric, steps=2, ignore_1d=False)).all()
+
+
+@pytest.mark.parametrize("normalization", ["filter", "layer", "model", None])
+def test_plane_directions_are_orthogonal_when_ignoring_1d_tensors(monkeypatch, model, metric, normalization):
+    """Zeroing 1-D tensors changes the angle between the directions, which must be corrected."""
+    one, two = _capture_plane_directions(monkeypatch, model, metric, normalization=normalization, ignore_1d=True)
+    assert cosine(one, two) == pytest.approx(0.0, abs=1e-5)

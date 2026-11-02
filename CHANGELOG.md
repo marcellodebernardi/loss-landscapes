@@ -7,6 +7,30 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [4.3.0] - 2026-11-02
+
+### Added
+
+- `ignore_1d` parameter for `random_line` and `random_plane`, and for
+  `ModelParameters.model_normalize_`, `layer_normalize_` and `filter_normalize_`. When true,
+  parameters with at most one dimension, such as biases and normalization layers' weights, are
+  left unperturbed: their direction is set to zero, as by the reference implementation's
+  `--xignore biasbn`. It defaults to true for `normalization="filter"`, matching the setup of
+  Li et al. (2018), and to false otherwise.
+
+### Fixed
+
+- Filter normalization no longer normalizes each element of a 1-D tensor separately, which kept
+  only the sign of the random direction and set each element's magnitude to that of the
+  corresponding parameter. With `ignore_1d=False`, such tensors are now normalized as a whole, as
+  layer normalization does. Filter normalization of 0-D parameters no longer raises `TypeError`.
+
+### Changed
+
+- With the default `normalization="filter"`, `random_line` and `random_plane` no longer perturb
+  1-D parameters, so their results differ from 4.2.0. Layer, model and no normalization are
+  unchanged unless `ignore_1d=True` is passed.
+
 ## [4.2.0] - 2026-11-02
 
 ### Removed
@@ -195,7 +219,8 @@ change. Each marker carries the diagnosis and a `TODO:`; grep the test suite for
 No changelog was kept before this file was introduced; see
 the git history for earlier versions.
 
-[Unreleased]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.2.0...HEAD
+[Unreleased]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.3.0...HEAD
+[4.3.0]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.2.0...v4.3.0
 [4.2.0]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.1.0...v4.2.0
 [4.1.0]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.8...v4.1.0
 [4.0.8]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.7...v4.0.8
