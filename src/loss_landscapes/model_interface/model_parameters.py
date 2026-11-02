@@ -17,17 +17,24 @@ import torch
 import torch.nn
 
 
+def _accumulation_dtype(tensor: torch.Tensor) -> torch.dtype:
+    """
+    Returns the dtype to accumulate reductions over a tensor in: float64, or float32 on
+    devices without float64 support (MPS). Either avoids the overflow of summing float16
+    tensors of more than about 65,000 elements in their own dtype.
+    """
+    return torch.float32 if tensor.device.type == "mps" else torch.float64
+
+
 def _power_sum(tensor: torch.Tensor, order) -> float:
-    """
-    Returns sum(abs(x) ** order) over a tensor, accumulated in float64. Summing in the
-    tensor's own dtype overflows for float16 tensors of more than about 65,000 elements.
-    """
-    return torch.pow(tensor.detach().abs().to(torch.float64), order).sum().item()
+    """Returns sum(abs(x) ** order) over a tensor, accumulated as by _accumulation_dtype."""
+    return torch.pow(tensor.detach().abs().to(_accumulation_dtype(tensor)), order).sum().item()
 
 
 def _dot(a: torch.Tensor, b: torch.Tensor) -> float:
-    """Returns the dot product of two tensors of equal shape, accumulated in float64."""
-    return (a.detach().to(torch.float64) * b.detach().to(torch.float64)).sum().item()
+    """Returns the dot product of two tensors of equal shape, accumulated as by _accumulation_dtype."""
+    dtype = _accumulation_dtype(a)
+    return (a.detach().to(dtype) * b.detach().to(dtype)).sum().item()
 
 
 class ModelParameters:
@@ -316,7 +323,7 @@ class ModelParameters:
         Returns the tensor as a flat numpy array.
         :return: a numpy array
         """
-        return np.concatenate([p.numpy().flatten() for p in self.parameters])
+        return np.concatenate([p.detach().cpu().numpy().flatten() for p in self.parameters])
 
     def _get_parameters(self) -> list:
         """
@@ -328,32 +335,32 @@ class ModelParameters:
 
 def rand_u_like(example_vector: ModelParameters) -> ModelParameters:
     """
-    Create a new ModelParameters object of size and shape compatible with the given
-    example vector, such that the values in the ModelParameter are uniformly distributed
+    Create a new ModelParameters object whose tensors have the shape, dtype and device of
+    the given example vector's, such that the values in the ModelParameter are uniformly distributed
     in the range [0,1].
-    :param example_vector: defines by example the size and shape the new vector will have
+    :param example_vector: defines by example the shape, dtype and device the new vector will have
     :return: new vector with uniformly distributed values
     """
     new_vector = []
 
     for param in example_vector:
-        new_vector.append(torch.rand(size=param.size(), dtype=example_vector[0].dtype))
+        new_vector.append(torch.rand_like(param))
 
     return ModelParameters(new_vector)
 
 
 def rand_n_like(example_vector: ModelParameters) -> ModelParameters:
     """
-    Create a new ModelParameters object of size and shape compatible with the given
-    example vector, such that the values in the ModelParameter are normally distributed
+    Create a new ModelParameters object whose tensors have the shape, dtype and device of
+    the given example vector's, such that the values in the ModelParameter are normally distributed
     as N(0,1).
-    :param example_vector: defines by example the size and shape the new vector will have
+    :param example_vector: defines by example the shape, dtype and device the new vector will have
     :return: new vector with normally distributed values
     """
     new_vector = []
 
     for param in example_vector:
-        new_vector.append(torch.randn(size=param.size(), dtype=example_vector[0].dtype))
+        new_vector.append(torch.randn_like(param))
 
     return ModelParameters(new_vector)
 

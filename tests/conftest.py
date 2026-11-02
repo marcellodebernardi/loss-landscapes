@@ -19,6 +19,25 @@ def deterministic():
     np.random.seed(SEED)
 
 
+def available_devices() -> list:
+    """CPU, plus whichever accelerators this machine has. CI runs CPU only.
+
+    Device tests are parametrized over this list rather than skipped, so that compatibility
+    runs, which reject ordinary skips, stay clean on machines without a GPU.
+    """
+    devices = ["cpu"]
+    if torch.cuda.is_available():
+        devices.append("cuda")
+    if torch.backends.mps.is_available():
+        devices.append("mps")
+    return devices
+
+
+@pytest.fixture(params=available_devices())
+def device(request):
+    return torch.device(request.param)
+
+
 @pytest.fixture
 def model():
     """A two-layer MLP: small enough to be fast, deep enough to exercise layer-wise code."""

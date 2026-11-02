@@ -284,6 +284,12 @@ def test_rand_n_like_preserves_shape_and_dtype(parameters):
         assert new.dtype == old.dtype
 
 
+@pytest.mark.parametrize("sampler", [rand_u_like, rand_n_like])
+def test_random_vectors_keep_each_tensors_own_dtype(sampler):
+    mixed = ModelParameters([torch.zeros(3, dtype=torch.float32), torch.zeros(3, dtype=torch.float64)])
+    assert [p.dtype for p in sampler(mixed)] == [torch.float32, torch.float64]
+
+
 def test_rand_n_like_is_standard_normal():
     sampled = rand_n_like(parameters_like((100, 100), (100,))).as_numpy()
     assert sampled.mean() == pytest.approx(0.0, abs=0.05)
