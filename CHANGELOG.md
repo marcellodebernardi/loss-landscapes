@@ -17,8 +17,15 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `theta`, as an array of shape `(n_directions, 2)`. Their sum estimates the curvature along `d`
   and their difference the slope. Previously `alpha` was ignored, each step was an unscaled,
   all-positive uniform vector of length roughly `sqrt(n_parameters / 3)`, and only the positive
-  side was evaluated, so the results could not be used to estimate curvature. The docstring now
-  credits the paper's first author.
+  side was evaluated, so the results could not be used to estimate curvature. The model's
+  parameters are now restored even if evaluating the loss raises. The docstring now credits the
+  paper's first author.
+
+### Known issues
+
+- Parameter norms are computed in the parameters' own precision, so normalisation, and hence
+  `random_line`, `random_plane` and `LossPerturbations`, fails for float16 models with tensors of
+  more than about 65,000 elements. This predates 4.0.7 and is pinned by a strict `xfail` test.
 
 ## [4.0.6] - 2026-11-02
 

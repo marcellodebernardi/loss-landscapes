@@ -82,21 +82,52 @@ def test_loss_perturbations_curvature_and_slope_scale_with_alpha(quadratic):
     np.testing.assert_allclose(small[:, 0] - small[:, 1], (large[:, 0] - large[:, 1]) / 2, rtol=1e-6)
 
 
-def test_loss_perturbations_step_has_length_alpha(quadratic):
-    """Each step is a unit direction scaled by alpha.
+def _recording_loss(model, record):
+    """An MSE loss that also calls record(model) each time it is evaluated."""
 
-    |delta_plus - delta_minus| = 2 * alpha * |grad.d|, which is at most 2 * alpha * |grad| when
-    d is a unit vector, with equality only along the gradient.
-    """
+    def loss_fn(output, target):
+        record(model)
+        return torch.nn.MSELoss()(output, target)
+
+    return loss_fn
+
+
+def test_loss_perturbations_evaluates_alpha_away_on_both_sides(quadratic):
+    """Every perturbed evaluation is exactly alpha from the start, at theta + step and theta - step."""
     model, inputs, target = quadratic
-    alpha = 0.1
-    gradient_norm = np.linalg.norm(LossGradient(torch.nn.MSELoss(), inputs, target)(wrap_model(model)))
+    start = np.concatenate([p.detach().numpy().flatten() for p in model.parameters()])
+    offsets = []
 
-    deltas = _perturbations(quadratic, alpha=alpha, n_directions=64)
-    slopes = np.abs(deltas[:, 0] - deltas[:, 1]) / (2 * alpha)
+    def record(m):
+        offsets.append(np.concatenate([p.detach().numpy().flatten() for p in m.parameters()]) - start)
 
-    assert slopes.max() <= gradient_norm
-    assert slopes.max() > 0.1 * gradient_norm
+    loss_fn = _recording_loss(model, record)
+    LossPerturbations(loss_fn, inputs, target, n_directions=4, alpha=0.1)(wrap_model(model))
+
+    start_offset, perturbed = offsets[0], np.array(offsets[1:])
+    assert np.all(start_offset == 0)
+    assert len(perturbed) == 8
+    np.testing.assert_allclose(np.linalg.norm(perturbed, axis=1), 0.1, rtol=1e-9)
+    np.testing.assert_allclose(perturbed[0::2], -perturbed[1::2], atol=1e-12)
+
+
+@pytest.mark.parametrize("failing_call", [2, 3], ids=["positive side", "negative side"])
+def test_loss_perturbations_restores_the_parameters_when_the_loss_raises(quadratic, failing_call):
+    model, inputs, target = quadratic
+    before = [p.detach().clone() for p in model.parameters()]
+    calls = []
+
+    def record(m):
+        calls.append(None)
+        if len(calls) == failing_call:
+            raise RuntimeError("loss undefined here")
+
+    loss_fn = _recording_loss(model, record)
+    with pytest.raises(RuntimeError, match="loss undefined here"):
+        LossPerturbations(loss_fn, inputs, target, n_directions=1, alpha=0.1)(wrap_model(model))
+
+    for old, new in zip(before, model.parameters(), strict=True):
+        assert torch.allclose(old, new, rtol=0, atol=1e-12)
 
 
 def test_loss_perturbations_curvature_is_non_negative_for_a_convex_loss(quadratic):

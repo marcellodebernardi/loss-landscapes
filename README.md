@@ -14,6 +14,10 @@ easier, aiding the analysis of the geometry of neural network loss landscapes.
 
 This library does not provide plotting facilities, letting the user define how the data should be plotted.
 
+> **Known limitations:** Parameter norms are computed in the model's own precision, so normalisation
+> fails for float16 models with tensors of more than about 65,000 elements. See the strict `xfail`
+> tests for details before relying on affected functionality.
+
 ## Quickstart
 
 Install from [PyPI](https://pypi.org/project/loss-landscapes/):

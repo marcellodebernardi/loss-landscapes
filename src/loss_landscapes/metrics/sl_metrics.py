@@ -109,12 +109,18 @@ class LossPerturbations(Metric):
             step = rand_n_like(start_point)
             step.mul_(self.alpha / step.model_norm())
 
-            start_point.add_(step)
-            delta_plus = self._loss(model_wrapper) - start_loss
-            start_point.sub_(step)
-            start_point.sub_(step)
-            delta_minus = self._loss(model_wrapper) - start_loss
-            start_point.add_(step)
+            # multiple of step currently added to the start point, so that it can be undone
+            # even if evaluating the loss raises
+            applied = 0.0
+            try:
+                start_point.add_(step)
+                applied = 1.0
+                delta_plus = self._loss(model_wrapper) - start_loss
+                start_point.sub_(step * 2.0)
+                applied = -1.0
+                delta_minus = self._loss(model_wrapper) - start_loss
+            finally:
+                start_point.sub_(step * applied)
 
             results.append((delta_plus, delta_minus))
 
