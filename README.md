@@ -14,10 +14,6 @@ easier, aiding the analysis of the geometry of neural network loss landscapes.
 
 This library does not provide plotting facilities, letting the user define how the data should be plotted.
 
-> **Known limitations:** Some normalisation routines produce incorrect results and gradient
-> evaluation has known defects. See the strict `xfail` tests for details before relying on
-> affected functionality.
-
 ## Quickstart
 
 Install from [PyPI](https://pypi.org/project/loss-landscapes/):
@@ -94,8 +90,7 @@ It additionally uses `torchvision`, `matplotlib` and `tqdm`; install these separ
 The `loss-landscapes` library can compute any quantity of interest at a collection of points in a parameter subspace,
 not just loss. This is accomplished using a `Metric`: a callable object which applies a pre-determined function,
 such as a cross entropy loss with a specific set of inputs and outputs, to the model. The `loss_landscapes.metrics`
-package provides `Loss`, `LossPerturbations` and `MetricPipeline`. `LossGradient` is also exported,
-but currently has the defects noted above.
+package provides `Loss`, `LossGradient`, `LossPerturbations` and `MetricPipeline`.
 
 Custom metrics can be defined by subclassing `Metric` and implementing `__call__`. The library
 implementation of `Loss` illustrates this contract:

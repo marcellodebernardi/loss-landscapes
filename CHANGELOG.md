@@ -7,8 +7,17 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [4.0.5] - 2026-11-02
+
 ### Fixed
 
+- `LossGradient` now returns the gradient of the loss with respect to the model parameters as
+  a flat array in parameter order. Previously it always raised, because `wrap_model()` disables
+  gradient tracking. It now enables tracking only for its own evaluation and restores the
+  previous state afterwards, and gives a zero gradient for parameters the loss does not use.
+  It raises `ValueError` if the loss uses none of the wrapped parameters, which indicates a
+  misconfigured wrapper, and supports sparse gradients such as those of
+  `torch.nn.Embedding(sparse=True)`.
 - `ModelWrapper.parameters()` and `named_parameters()` now yield the parameters (or
   `(name, parameter)` pairs) of every wrapped module. Previously they yielded one generator
   object per module.
@@ -119,7 +128,8 @@ change. Each marker carries the diagnosis and a `TODO:`; grep the test suite for
 No changelog was kept before this file was introduced; see
 the git history for earlier versions.
 
-[Unreleased]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.4...HEAD
+[Unreleased]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.5...HEAD
+[4.0.5]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.4...v4.0.5
 [4.0.4]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.3...v4.0.4
 [4.0.3]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.2...v4.0.3
 [4.0.2]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.1...v4.0.2
