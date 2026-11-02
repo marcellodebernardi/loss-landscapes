@@ -7,6 +7,14 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `random_line`, `random_plane` and `orthogonal_to` now sample directions from a standard
+  Gaussian, as in Li et al. (2018), instead of uniformly from [0, 1). Uniform directions had
+  only positive entries, so every direction moved all parameters the same way and two
+  independently sampled directions were strongly correlated. Results from `random_line` and
+  `random_plane` will differ from 4.0.5. `LossPerturbations` still samples uniformly.
+
 ## [4.0.5] - 2026-11-02
 
 ### Fixed
