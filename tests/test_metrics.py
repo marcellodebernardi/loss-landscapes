@@ -189,3 +189,27 @@ def test_loss_gradient_is_zero_for_modules_the_loss_does_not_use(model, other_mo
     assert gradient.shape == (n_used + sum(p.numel() for p in other_model.parameters()),)
     assert np.any(gradient[:n_used] != 0)
     assert np.all(gradient[n_used:] == 0)
+
+
+def test_loss_gradient_rejects_a_loss_that_uses_no_wrapped_parameter(model, data):
+    inputs, target = data
+    wrapper = wrap_model(GeneralModelWrapper(model, [model], lambda m, x: x[:, :2]))
+
+    with pytest.raises(ValueError, match="does not depend on any of the wrapped parameters"):
+        LossGradient(torch.nn.MSELoss(), inputs, target)(wrapper)
+
+    assert all(not p.requires_grad for p in model.parameters())
+
+
+def test_loss_gradient_densifies_sparse_gradients():
+    sparse = torch.nn.Embedding(10, 3, sparse=True)
+    dense = torch.nn.Embedding(10, 3)
+    dense.load_state_dict(sparse.state_dict())
+    indices, target = torch.tensor([1, 4, 1, 7]), torch.rand(4, 3)
+
+    dense.requires_grad_(True)
+    torch.nn.MSELoss()(dense(indices), target).backward()
+
+    gradient = LossGradient(torch.nn.MSELoss(), indices, target)(wrap_model(sparse))
+
+    np.testing.assert_allclose(gradient, dense.weight.grad.numpy().flatten(), rtol=1e-6)

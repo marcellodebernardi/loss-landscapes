@@ -48,14 +48,24 @@ class LossGradient(Metric):
                 p.requires_grad_(True)
             with torch.enable_grad():
                 loss = self.loss_fn(model_wrapper.forward(self.inputs), self.target)
+                if not loss.requires_grad:
+                    raise ValueError(
+                        "The loss does not depend on any of the wrapped parameters. Check that the "
+                        "wrapper exposes the modules its forward function uses, and that the forward "
+                        "function does not detach them or run them under torch.no_grad()."
+                    )
                 gradients = torch.autograd.grad(loss, parameters, allow_unused=True)
         finally:
             for p, requires_grad in zip(parameters, previous, strict=True):
                 p.requires_grad_(requires_grad)
 
-        # parameters the loss does not depend on have a zero gradient
+        # parameters the loss does not depend on have a zero gradient, and sparse gradients
+        # (e.g. from torch.nn.Embedding(sparse=True)) must be made dense to convert to numpy
         return ModelParameters(
-            [torch.zeros_like(p) if g is None else g.detach() for p, g in zip(parameters, gradients, strict=True)]
+            [
+                torch.zeros_like(p) if g is None else g.detach().to_dense()
+                for p, g in zip(parameters, gradients, strict=True)
+            ]
         ).as_numpy()
 
 

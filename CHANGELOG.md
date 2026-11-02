@@ -15,6 +15,9 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a flat array in parameter order. Previously it always raised, because `wrap_model()` disables
   gradient tracking. It now enables tracking only for its own evaluation and restores the
   previous state afterwards, and gives a zero gradient for parameters the loss does not use.
+  It raises `ValueError` if the loss uses none of the wrapped parameters, which indicates a
+  misconfigured wrapper, and supports sparse gradients such as those of
+  `torch.nn.Embedding(sparse=True)`.
 - `ModelWrapper.parameters()` and `named_parameters()` now yield the parameters (or
   `(name, parameter)` pairs) of every wrapped module. Previously they yielded one generator
   object per module.
