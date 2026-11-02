@@ -17,26 +17,6 @@ import torch
 import torch.nn
 
 
-def _accumulation_dtype(tensor: torch.Tensor) -> torch.dtype:
-    """
-    Returns the dtype to accumulate reductions over a tensor in: float64, or float32 on
-    devices without float64 support (MPS). Either avoids the overflow of summing float16
-    tensors of more than about 65,000 elements in their own dtype.
-    """
-    return torch.float32 if tensor.device.type == "mps" else torch.float64
-
-
-def _power_sum(tensor: torch.Tensor, order) -> float:
-    """Returns sum(abs(x) ** order) over a tensor, accumulated as by _accumulation_dtype."""
-    return torch.pow(tensor.detach().abs().to(_accumulation_dtype(tensor)), order).sum().item()
-
-
-def _dot(a: torch.Tensor, b: torch.Tensor) -> float:
-    """Returns the dot product of two tensors of equal shape, accumulated as by _accumulation_dtype."""
-    dtype = _accumulation_dtype(a)
-    return (a.detach().to(dtype) * b.detach().to(dtype)).sum().item()
-
-
 class ModelParameters:
     """
     A ModelParameters object is an abstract view of a model's optimizable parameters as a tensor. This class
@@ -221,12 +201,19 @@ class ModelParameters:
         the two still span the same plane as before. `other` is not modified. A zero `other`
         raises ZeroDivisionError because the projection onto it is undefined.
 
+        The subtraction is computed in float64 (float32 on MPS) and the result rounded to each
+        tensor's dtype. When this vector is nearly parallel to `other`, the remainder is a small
+        difference of large values, which would lose most of its precision in a low-precision dtype.
+
         :param other: vector to make this one orthogonal to
         :return: none
         """
-        self.sub_(other * (self.dot(other) / other.dot(other)))
+        coefficient = self.dot(other) / other.dot(other)
+        for mine, theirs in zip(self.parameters, other.parameters, strict=True):
+            dtype = _accumulation_dtype(mine)
+            mine.copy_(mine.to(dtype) - coefficient * theirs.to(dtype))
 
-    def model_normalize_(self, ref_point: "ModelParameters", order=2):
+    def model_normalize_(self, ref_point: "ModelParameters", order=2, ignore_1d=False):
         """
         Rescale this vector in place to match the reference model's norm.
 
@@ -237,48 +224,66 @@ class ModelParameters:
 
         :param ref_point: model parameters whose norm sets the target magnitude
         :param order: norm order, e.g. 2 for L2 norm
+        :param ignore_1d: set tensors with at most one dimension, such as biases, to zero, and
+            take both norms over the remaining tensors
         :return: none
         """
-        scale = ref_point.model_norm(order) / self.model_norm(order)
-        for parameter in self.parameters:
-            parameter *= scale
 
-    def layer_normalize_(self, ref_point: "ModelParameters", order=2):
+        def norm(vector: "ModelParameters") -> float:
+            kept = [p for p in vector.parameters if not (ignore_1d and _is_1d(p))]
+            return math.pow(sum(_power_sum(p, order) for p in kept), 1.0 / order)
+
+        scale = norm(ref_point) / norm(self)
+        for parameter in self.parameters:
+            parameter *= 0.0 if ignore_1d and _is_1d(parameter) else scale
+
+    def layer_normalize_(self, ref_point: "ModelParameters", order=2, ignore_1d=False):
         """
         In-place layer-wise normalization of the tensor.
 
         A layer whose reference norm is zero, such as a zero-initialised bias, is set to zero
-        without dividing by its own norm, so normalizing again leaves it at zero.
+        without dividing by its own norm, so normalizing again leaves it at zero. A layer that is
+        zero in this vector has no direction to scale and stays zero.
 
         :param ref_point: use this model's layer norms, if given
         :param order: norm order, e.g. 2 for L2 norm
+        :param ignore_1d: set tensors with at most one dimension, such as biases, to zero
         :return: none
         """
         # in-place normalize each parameter
         for layer_idx, parameter in enumerate(self.parameters, 0):
-            ref_norm = ref_point.layer_norm(layer_idx, order)
-            parameter *= 0.0 if ref_norm == 0 else ref_norm / self.layer_norm(layer_idx, order)
+            if ignore_1d and _is_1d(parameter):
+                parameter.zero_()
+                continue
+            parameter *= _block_scale(ref_point.layer_norm(layer_idx, order), self.layer_norm(layer_idx, order))
 
-    def filter_normalize_(self, ref_point: "ModelParameters", order=2):
+    def filter_normalize_(self, ref_point: "ModelParameters", order=2, ignore_1d=False):
         """
         In-place filter-wise normalization of the tensor.
 
+        A filter is a slice along a tensor's first dimension. A tensor with at most one dimension,
+        such as a bias, has no filters, since each would be a single element: it is either set to
+        zero (ignore_1d) or normalized as a whole, as by layer_normalize_.
+
         A filter or bias vector whose reference norm is zero is set to zero without dividing by
-        its own norm, so normalizing again leaves it at zero.
+        its own norm, so normalizing again leaves it at zero. One that is zero in this vector has no
+        direction to scale and stays zero.
 
         :param ref_point: use this model's filter norms, if given
         :param order: norm order, e.g. 2 for L2 norm
+        :param ignore_1d: set tensors with at most one dimension to zero, as Li et al. (2018) do
         :return: none
         """
         for l in range(len(self.parameters)):
-            # normalize one-dimensional bias vectors
-            if len(self.parameters[l].size()) == 1:
-                ref_norm = ref_point.layer_norm(l, order)
-                self.parameters[l] *= 0.0 if ref_norm == 0 else ref_norm / self.layer_norm(l, order)
-            # normalize two-dimensional weight vectors
+            if _is_1d(self.parameters[l]):
+                if ignore_1d:
+                    self.parameters[l].zero_()
+                else:
+                    self.parameters[l] *= _block_scale(ref_point.layer_norm(l, order), self.layer_norm(l, order))
+                continue
             for f in range(len(self.parameters[l])):
-                ref_norm = ref_point.filter_norm((l, f), order)
-                self.parameters[l][f] *= 0.0 if ref_norm == 0 else ref_norm / self.filter_norm((l, f), order)
+                scale = _block_scale(ref_point.filter_norm((l, f), order), self.filter_norm((l, f), order))
+                self.parameters[l][f] *= scale
 
     def model_norm(self, order=2) -> float:
         """
@@ -413,3 +418,36 @@ def model_normalize(tensor, order) -> ModelParameters:
     new_tensor = copy.deepcopy(tensor)
     new_tensor.model_normalize_(order)
     return new_tensor
+
+
+def _is_1d(tensor: torch.Tensor) -> bool:
+    """Whether a tensor has at most one dimension, such as a bias or a normalization layer's weight."""
+    return tensor.dim() <= 1
+
+
+def _accumulation_dtype(tensor: torch.Tensor) -> torch.dtype:
+    """
+    Returns the dtype to accumulate reductions over a tensor in: float64, or float32 on
+    devices without float64 support (MPS). Either avoids the overflow of summing float16
+    tensors of more than about 65,000 elements in their own dtype.
+    """
+    return torch.float32 if tensor.device.type == "mps" else torch.float64
+
+
+def _power_sum(tensor: torch.Tensor, order) -> float:
+    """Returns sum(abs(x) ** order) over a tensor, accumulated as by _accumulation_dtype."""
+    return torch.pow(tensor.detach().abs().to(_accumulation_dtype(tensor)), order).sum().item()
+
+
+def _dot(a: torch.Tensor, b: torch.Tensor) -> float:
+    """Returns the dot product of two tensors of equal shape, accumulated as by _accumulation_dtype."""
+    dtype = _accumulation_dtype(a)
+    return (a.detach().to(dtype) * b.detach().to(dtype)).sum().item()
+
+
+def _block_scale(ref_norm: float, own_norm: float) -> float:
+    """
+    Returns the factor that gives a block of a direction the reference block's norm: zero if the
+    reference block is zero, and zero (leaving the block at zero) if the direction's block is zero.
+    """
+    return 0.0 if ref_norm == 0 or own_norm == 0 else ref_norm / own_norm

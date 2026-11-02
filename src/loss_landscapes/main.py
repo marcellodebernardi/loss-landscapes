@@ -98,6 +98,7 @@ def random_line(
     steps=100,
     normalization="filter",
     deepcopy_model=False,
+    ignore_1d=None,
 ) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model or agent along a
@@ -135,6 +136,10 @@ def random_line(
     :param steps: at how many steps from start to end the model is evaluated
     :param normalization: normalization of direction other, must be one of 'filter', 'layer', 'model'
     :param deepcopy_model: indicates whether the method will deepcopy the model(s) to avoid aliasing
+    :param ignore_1d: whether to leave parameters with at most one dimension, such as biases and
+        normalization layers' weights, unperturbed by setting their direction to zero. None means
+        True for 'filter' normalization, as in `https://arxiv.org/abs/1712.09913v3`, and False
+        otherwise. If False, filter normalization scales each such tensor as a whole
     :return: 1-d array of loss values along the randomly sampled direction
     """
     # create wrappers from deep copies to avoid aliasing if desired
@@ -143,18 +148,8 @@ def random_line(
     # obtain start point in parameter space and random direction
     # random direction is randomly sampled, then normalized, and finally scaled by distance/steps
     start_point = model_start_wrapper.get_module_parameters()
-    direction = rand_n_like(start_point)
-
-    if normalization == "model":
-        direction.model_normalize_(start_point)
-    elif normalization == "layer":
-        direction.layer_normalize_(start_point)
-    elif normalization == "filter":
-        direction.filter_normalize_(start_point)
-    elif normalization is None:
-        pass
-    else:
-        raise AttributeError("Unsupported normalization argument. Supported values are model, layer, and filter")
+    normalize_ = _normalizer(normalization, start_point, ignore_1d, "random_line", 1)
+    direction = _normalized_direction(start_point, normalize_, "random_line")
 
     direction.mul_(((start_point.model_norm() * distance) / steps) / direction.model_norm())
 
@@ -253,6 +248,7 @@ def random_plane(
     steps=20,
     normalization="filter",
     deepcopy_model=False,
+    ignore_1d=None,
 ) -> np.ndarray:
     """
     Returns the computed value of the evaluation function applied to the model or agent along a planar
@@ -270,7 +266,11 @@ def random_plane(
     second is normalized to within a small tolerance, because making it orthogonal to the
     first perturbs its layer or filter norms; for models in which many layers or filters hold
     a single parameter, its norms may be only approximate. A model with fewer than two
-    parameters has no plane through it and raises ValueError.
+    perturbed parameters (see 'ignore_1d') has no plane through it and raises ValueError, as do
+    models whose normalized directions span fewer than two dimensions, such as one whose only
+    perturbed parameters are a single nonzero single-element filter. In low precision, directions
+    that are distinct but too close to tell apart reliably, such as those of a float16 model whose
+    single-element filters differ in norm by a factor of 1000, raise the same error.
 
     Directions are sampled from a standard Gaussian, as in `https://arxiv.org/abs/1712.09913v3`.
     Note that the dimensionality of the model parameters has an impact on the expected
@@ -298,44 +298,62 @@ def random_plane(
     :param steps: at how many steps from start to end the model is evaluated
     :param normalization: normalization of direction vectors, must be one of 'filter', 'layer', 'model'
     :param deepcopy_model: indicates whether the method will deepcopy the model(s) to avoid aliasing
+    :param ignore_1d: whether to leave parameters with at most one dimension, such as biases and
+        normalization layers' weights, unperturbed by setting their direction to zero. None means
+        True for 'filter' normalization, as in `https://arxiv.org/abs/1712.09913v3`, and False
+        otherwise. If False, filter normalization scales each such tensor as a whole
     :return: 2-d array of shape (steps, steps), where entry [i, j] is the value at the i-th step
         along the first direction and the j-th step along the second
     """
     model_start_wrapper = wrap_model(copy.deepcopy(model) if deepcopy_model else model)
 
     start_point = model_start_wrapper.get_module_parameters()
-    if start_point.numel() < 2:
-        raise ValueError("random_plane requires a model with at least two parameters")
-    dir_one = rand_n_like(start_point)
-    dir_two = orthogonal_to(dir_one)
+    normalize_ = _normalizer(normalization, start_point, ignore_1d, "random_plane", 2)
+    dir_one = _normalized_direction(start_point, normalize_, "random_plane")
 
-    if normalization is not None:
-        if normalization == "model":
-            normalize_ = ModelParameters.model_normalize_
-        elif normalization == "layer":
-            normalize_ = ModelParameters.layer_normalize_
-        elif normalization == "filter":
-            normalize_ = ModelParameters.filter_normalize_
-        else:
-            raise AttributeError("Unsupported normalization argument. Supported values are model, layer, and filter")
-        normalize_(dir_one, start_point)
-        normalize_(dir_two, start_point)
+    # Normalisation can map the second direction onto the first: when every perturbed filter is a
+    # single parameter, a normalised direction keeps only the signs of its sample, so few distinct
+    # directions exist. Both directions are only accurate to the parameters' machine epsilon, so the
+    # remainder after projection has a relative error of about epsilon divided by the fraction of
+    # dir_two's norm it retains. A remainder retaining less than 10 epsilons, whose relative error
+    # would exceed 10%, is treated as collapsed and resampled; the attempts are capped and fail
+    # with a ValueError. A small remainder above that is a genuine direction, as when filter norms
+    # differ by orders of magnitude, and is kept.
+    collapse_tolerance = 10 * max(torch.finfo(p.dtype).eps for p in start_point.parameters)
+    max_attempts = 20
+    for _ in range(max_attempts):
+        dir_two = orthogonal_to(dir_one)
+        if normalize_ is not None:
+            normalize_(dir_two)
+            norm_before_projection = dir_two.model_norm()
 
-        # Layer- and filter-wise normalisation rescale blocks of a direction by different factors,
-        # which does not preserve angles, so the directions are no longer orthogonal. Alternate
-        # projecting dir_two onto the orthogonal complement of dir_one and renormalising it until
-        # the pair is orthogonal to within tolerance; this takes a few iterations for typical
-        # models. It can stall when many blocks hold a single element, so the loop is capped, and
-        # it always ends on a projection so that orthogonality holds even when the cap is reached.
-        tolerance = 1e-6
-        max_iterations = 20
-        for _ in range(max_iterations):
-            cosine = dir_one.dot(dir_two) / (dir_one.model_norm() * dir_two.model_norm())
-            if abs(cosine) < tolerance:
-                break
+            # Layer- and filter-wise normalisation rescale blocks of a direction by different
+            # factors, which does not preserve angles, so the directions are no longer orthogonal.
+            # Alternate projecting dir_two onto the orthogonal complement of dir_one and
+            # renormalising it until the pair is orthogonal to within tolerance; this takes a few
+            # iterations for typical models. It can stall when many blocks hold a single element, so
+            # the loop is capped, and it always ends on a projection so that orthogonality holds
+            # even when the cap is reached.
+            tolerance = 1e-6
+            max_iterations = 20
+            for _ in range(max_iterations):
+                norm_two = dir_two.model_norm()
+                if norm_two == 0 or abs(dir_one.dot(dir_two)) < tolerance * dir_one.model_norm() * norm_two:
+                    break
+                dir_two.orthogonalize_(dir_one)
+                normalize_(dir_two)
             dir_two.orthogonalize_(dir_one)
-            normalize_(dir_two, start_point)
-        dir_two.orthogonalize_(dir_one)
+
+            norm_after_projection = dir_two.model_norm()
+            if norm_after_projection <= collapse_tolerance * norm_before_projection:
+                continue
+        break
+    else:
+        raise ValueError(
+            "random_plane could not find a second direction orthogonal to the first: after "
+            "normalization, the directions span fewer than two dimensions that the parameters' "
+            "dtype can resolve"
+        )
 
     # scale to match steps and total distance
     dir_one.mul_(((start_point.model_norm() * distance) / steps) / dir_one.model_norm())
@@ -370,6 +388,61 @@ def random_plane(
         start_point.add_(dir_one)
 
     return np.array(data_matrix)
+
+
+def _normalizer(
+    normalization, reference: ModelParameters, ignore_1d, caller: str, min_parameters: int
+) -> typing.Optional[typing.Callable[[ModelParameters], None]]:
+    """
+    Returns an in-place function that normalizes a direction to the reference point, or None if
+    directions are used as sampled. Resolves ignore_1d's default (True for 'filter' normalization,
+    as in Li et al. (2018), and False otherwise), and checks that at least min_parameters
+    parameters would be perturbed, raising ValueError otherwise.
+    """
+    if ignore_1d is None:
+        ignore_1d = normalization == "filter"
+
+    perturbed = sum(p.numel() for p in reference.parameters if not (ignore_1d and p.dim() <= 1))
+    if perturbed < min_parameters:
+        plural = "s" if min_parameters > 1 else ""
+        reason = " that ignore_1d does not exclude" if ignore_1d else ""
+        raise ValueError(f"{caller} requires a model with at least {min_parameters} parameter{plural}{reason}")
+
+    if normalization == "model":
+        return lambda direction: direction.model_normalize_(reference, ignore_1d=ignore_1d)
+    if normalization == "layer":
+        return lambda direction: direction.layer_normalize_(reference, ignore_1d=ignore_1d)
+    if normalization == "filter":
+        return lambda direction: direction.filter_normalize_(reference, ignore_1d=ignore_1d)
+    if normalization is None:
+        return _zero_1d_ if ignore_1d else None
+    raise AttributeError("Unsupported normalization argument. Supported values are model, layer, and filter")
+
+
+def _normalized_direction(
+    start_point: ModelParameters, normalize_: typing.Optional[typing.Callable[[ModelParameters], None]], caller: str
+) -> ModelParameters:
+    """
+    Samples a Gaussian direction like start_point and normalizes it, raising ValueError if
+    normalization leaves nothing to perturb: every parameter is excluded by ignore_1d or lies in a
+    layer or filter whose parameters are all zero.
+    """
+    direction = rand_n_like(start_point)
+    if normalize_ is not None:
+        normalize_(direction)
+    if direction.model_norm() == 0:
+        raise ValueError(
+            f"{caller} has no parameters to perturb after normalization: each is excluded by ignore_1d "
+            "or lies in a layer or filter whose parameters are all zero (try ignore_1d=False)"
+        )
+    return direction
+
+
+def _zero_1d_(direction: ModelParameters):
+    """Sets a direction's tensors with at most one dimension to zero, in place."""
+    for parameter in direction.parameters:
+        if parameter.dim() <= 1:
+            parameter.zero_()
 
 
 # todo add hypersphere function

@@ -94,6 +94,12 @@ two-dimensional array of its values. This array can be plotted as a contour map 
 
 <p align="center"><img src="https://raw.githubusercontent.com/marcellodebernardi/loss-landscapes/main/img/loss-contour-3d.png" width="75%" align="middle"/></p>
 
+Filter normalization, as in the paper, scales each filter of a random direction to the norm of the
+corresponding filter of `model`, and by default leaves parameters with at most one dimension, such
+as biases and normalization layers' weights, unperturbed. Pass `ignore_1d=False` to perturb them
+too, each scaled as a whole; for `"layer"` and `"model"` normalization they are perturbed unless
+`ignore_1d=True`.
+
 See [the core-features notebook](examples/core-features.ipynb) for a training and plotting example.
 It additionally uses `torchvision`, `matplotlib` and `tqdm`; install these separately.
 

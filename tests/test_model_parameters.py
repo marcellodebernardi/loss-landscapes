@@ -108,9 +108,54 @@ def test_filter_normalize_gives_each_filter_the_reference_filter_norm(parameters
     direction.filter_normalize_(parameters)
 
     for layer_index, layer in enumerate(parameters._get_parameters()):
+        if layer.dim() <= 1:
+            continue
         for filter_index in range(len(layer)):
             index = (layer_index, filter_index)
             assert direction.filter_norm(index) == pytest.approx(parameters.filter_norm(index), rel=1e-4)
+
+
+def test_filter_normalize_scales_1d_tensors_as_a_whole():
+    """A bias has no filters: normalising each element alone would keep only its sign."""
+    reference = ModelParameters([torch.ones(2, 3), torch.tensor([0.5, -2.0, 0.0, 3.0])])
+    bias_direction = torch.tensor([0.3, 0.7, -1.2, -0.01])
+    direction = ModelParameters([torch.ones(2, 3), bias_direction.clone()])
+
+    direction.filter_normalize_(reference)
+
+    expected = bias_direction * reference.layer_norm(1) / bias_direction.norm()
+    torch.testing.assert_close(direction[1], expected)
+
+
+def test_filter_normalize_handles_scalar_parameters():
+    reference = ModelParameters([torch.ones(2, 3), torch.tensor(2.0)])
+    direction = ModelParameters([torch.ones(2, 3), torch.tensor(-0.5)])
+
+    direction.filter_normalize_(reference)
+
+    torch.testing.assert_close(direction[1], torch.tensor(-2.0))
+
+
+@pytest.mark.parametrize("normalization", ["model", "layer", "filter"])
+def test_normalize_with_ignore_1d_zeroes_1d_tensors_only(parameters, normalization):
+    direction = rand_n_like(parameters)
+    getattr(direction, f"{normalization}_normalize_")(parameters, ignore_1d=True)
+
+    for new in direction:
+        if new.dim() <= 1:
+            torch.testing.assert_close(new, torch.zeros_like(new))
+        else:
+            assert new.abs().sum() > 0
+
+
+def test_model_normalize_with_ignore_1d_matches_the_norm_of_the_remaining_tensors(parameters):
+    direction = rand_n_like(parameters)
+    direction.model_normalize_(parameters, ignore_1d=True)
+
+    def norm_without_1d(vector):
+        return math.sqrt(sum(float(p.pow(2).sum()) for p in vector if p.dim() > 1))
+
+    assert norm_without_1d(direction) == pytest.approx(norm_without_1d(parameters), rel=1e-5)
 
 
 def test_layer_normalize_gives_each_layer_the_reference_layer_norm(parameters):
@@ -135,6 +180,20 @@ def test_normalize_maps_zero_reference_blocks_to_zero_repeatedly(normalization):
         torch.testing.assert_close(direction[0], torch.tensor([[5.0 / 2**0.5, 5.0 / 2**0.5], [0.0, 0.0]]))
     else:
         assert direction.layer_norm(0) == pytest.approx(5.0)
+
+
+@pytest.mark.parametrize("normalization", ["layer", "filter"])
+def test_normalize_leaves_zero_blocks_of_the_direction_at_zero(normalization):
+    """A zero block has no direction to scale, so it stays zero instead of dividing by zero."""
+    reference = ModelParameters([torch.tensor([[3.0, 4.0], [1.0, 1.0]]), torch.tensor([1.0, 2.0])])
+    direction = ModelParameters([torch.tensor([[0.0, 0.0], [1.0, 2.0]]), torch.tensor([0.0, 0.0])])
+
+    getattr(direction, f"{normalization}_normalize_")(reference)
+
+    torch.testing.assert_close(direction[1], torch.zeros(2))
+    if normalization == "filter":
+        torch.testing.assert_close(direction[0][0], torch.zeros(2))
+        assert direction.filter_norm((0, 1)) == pytest.approx(reference.filter_norm((0, 1)))
 
 
 def test_model_normalize_gives_the_reference_model_norm(parameters):
