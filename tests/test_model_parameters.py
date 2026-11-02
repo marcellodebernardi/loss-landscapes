@@ -306,6 +306,21 @@ def test_l2_norm_is_the_root_of_the_sum_of_squares(parameters):
     assert parameters.model_norm(2) == pytest.approx(expected, rel=1e-5)
 
 
+# TODO: accumulate norms in float64, then drop this marker.
+@pytest.mark.xfail(
+    reason="model_norm, layer_norm and filter_norm sum |x| ** order in the parameters' own dtype, "
+    "so for float16 tensors with more than about 65,000 elements the sum overflows to inf. "
+    "Normalisation then scales directions to zero or raises ZeroDivisionError, which breaks "
+    "random_line, random_plane and LossPerturbations for such models.",
+    strict=True,
+)
+def test_norms_do_not_overflow_for_float16_parameters():
+    parameters = ModelParameters([torch.ones(100_000, dtype=torch.float16)])
+
+    assert parameters.model_norm() == pytest.approx(math.sqrt(100_000))
+    assert parameters.layer_norm(0) == pytest.approx(math.sqrt(100_000))
+
+
 def test_l1_norm_is_the_sum_of_absolute_values(parameters):
     expected = sum(float(p.abs().sum()) for p in parameters._get_parameters())
     assert parameters.model_norm(1) == pytest.approx(expected, rel=1e-5)

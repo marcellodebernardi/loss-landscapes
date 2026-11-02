@@ -39,11 +39,99 @@ def test_loss_returns_a_python_float(data, wrapper):
 # --- LossPerturbations -----------------------------------------------------
 
 
-def test_loss_perturbations_returns_one_delta_per_direction(data, wrapper):
+def test_loss_perturbations_returns_a_pair_of_deltas_per_direction(data, wrapper):
     inputs, target = data
     metric = LossPerturbations(torch.nn.MSELoss(), inputs, target, n_directions=5, alpha=0.1)
 
-    assert metric(wrapper).shape == (5,)
+    assert metric(wrapper).shape == (5, 2)
+
+
+def test_loss_perturbations_with_no_directions_is_empty(data, wrapper):
+    inputs, target = data
+    metric = LossPerturbations(torch.nn.MSELoss(), inputs, target, n_directions=0, alpha=0.1)
+
+    assert metric(wrapper).shape == (0, 2)
+
+
+@pytest.fixture
+def quadratic():
+    """A linear model under MSE loss, whose loss is exactly quadratic in its parameters.
+
+    float64 keeps rounding well below the alpha ** 2 scale of the curvature terms.
+    """
+    torch.manual_seed(0)
+    model = torch.nn.Linear(4, 2).double()
+    return model, torch.rand(8, 4, dtype=torch.float64), torch.rand(8, 2, dtype=torch.float64)
+
+
+def _perturbations(quadratic, alpha, n_directions=16, seed=1):
+    model, inputs, target = quadratic
+    torch.manual_seed(seed)
+    return LossPerturbations(torch.nn.MSELoss(), inputs, target, n_directions, alpha)(wrap_model(model))
+
+
+def test_loss_perturbations_curvature_and_slope_scale_with_alpha(quadratic):
+    """With the same directions, the curvature term scales as alpha ** 2 and the slope as alpha.
+
+    The loss is quadratic, so delta_plus + delta_minus = alpha ** 2 * d.H.d and
+    delta_plus - delta_minus = 2 * alpha * grad.d exactly.
+    """
+    large, small = _perturbations(quadratic, alpha=0.1), _perturbations(quadratic, alpha=0.05)
+
+    np.testing.assert_allclose(small.sum(axis=1), large.sum(axis=1) / 4, rtol=1e-6)
+    np.testing.assert_allclose(small[:, 0] - small[:, 1], (large[:, 0] - large[:, 1]) / 2, rtol=1e-6)
+
+
+def _recording_loss(model, record):
+    """An MSE loss that also calls record(model) each time it is evaluated."""
+
+    def loss_fn(output, target):
+        record(model)
+        return torch.nn.MSELoss()(output, target)
+
+    return loss_fn
+
+
+def test_loss_perturbations_evaluates_alpha_away_on_both_sides(quadratic):
+    """Every perturbed evaluation is exactly alpha from the start, at theta + step and theta - step."""
+    model, inputs, target = quadratic
+    start = np.concatenate([p.detach().numpy().flatten() for p in model.parameters()])
+    offsets = []
+
+    def record(m):
+        offsets.append(np.concatenate([p.detach().numpy().flatten() for p in m.parameters()]) - start)
+
+    loss_fn = _recording_loss(model, record)
+    LossPerturbations(loss_fn, inputs, target, n_directions=4, alpha=0.1)(wrap_model(model))
+
+    start_offset, perturbed = offsets[0], np.array(offsets[1:])
+    assert np.all(start_offset == 0)
+    assert len(perturbed) == 8
+    np.testing.assert_allclose(np.linalg.norm(perturbed, axis=1), 0.1, rtol=1e-9)
+    np.testing.assert_allclose(perturbed[0::2], -perturbed[1::2], atol=1e-12)
+
+
+@pytest.mark.parametrize("failing_call", [2, 3], ids=["positive side", "negative side"])
+def test_loss_perturbations_restores_the_parameters_when_the_loss_raises(quadratic, failing_call):
+    model, inputs, target = quadratic
+    before = [p.detach().clone() for p in model.parameters()]
+    calls = []
+
+    def record(m):
+        calls.append(None)
+        if len(calls) == failing_call:
+            raise RuntimeError("loss undefined here")
+
+    loss_fn = _recording_loss(model, record)
+    with pytest.raises(RuntimeError, match="loss undefined here"):
+        LossPerturbations(loss_fn, inputs, target, n_directions=1, alpha=0.1)(wrap_model(model))
+
+    for old, new in zip(before, model.parameters(), strict=True):
+        assert torch.allclose(old, new, rtol=0, atol=1e-12)
+
+
+def test_loss_perturbations_curvature_is_non_negative_for_a_convex_loss(quadratic):
+    assert (_perturbations(quadratic, alpha=0.1).sum(axis=1) >= -1e-12).all()
 
 
 def test_loss_perturbations_restores_the_starting_parameters(model, data, wrapper):
