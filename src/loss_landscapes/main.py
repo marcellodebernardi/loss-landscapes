@@ -371,3 +371,5 @@ def random_plane(
 
 
 # todo add hypersphere function
+# todo add loss along a training trajectory, and along low-loss paths between two trained
+#  models (AutoNEB, Garipov et al. curve search); see v4.0.2's removed `contrib` sketches

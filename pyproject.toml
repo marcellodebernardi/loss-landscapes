@@ -86,11 +86,10 @@ convention = "google"
 "src/loss_landscapes/metrics/__init__.py" = ["F401"]
 # TODO: the library predates these rules. Remove each exemption as it is brought up to
 # standard: D (reST docstrings), E741 (`l` as a layer index), E501 (one line in a
-# commented-out metric), F841 (unused locals in the dead `contrib`).
+# commented-out metric).
 "src/loss_landscapes/**" = ["D"]
 "src/loss_landscapes/model_interface/model_parameters.py" = ["D", "E741"]
 "src/loss_landscapes/metrics/sl_metrics.py" = ["D", "E501"]
-"src/loss_landscapes/contrib/*" = ["D", "E501", "F841"]
 # Test names are the documentation.
 "tests/**" = ["D1"]
 
@@ -106,8 +105,6 @@ files = ["src"]
 python_version = "3.12"
 ignore_missing_imports = true
 warn_unused_configs = true
-# `contrib` imports a module removed in 2019; see the xfail in tests/test_packaging.py.
-exclude = ["^src/loss_landscapes/contrib/"]
 
 # TODO: `__eq__` is typed as taking ModelParameters rather than object, and the class has
 # `__getitem__`/`__len__` but no `__iter__`. Both need a source change.

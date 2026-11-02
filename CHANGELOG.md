@@ -7,6 +7,13 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [4.0.3] - 2026-11-02
+
+### Removed
+
+- `loss_landscapes.contrib`, which could not be imported since the 2019 refactor and was
+  mostly unimplemented stubs.
+
 ## [4.0.2] - 2026-10-31
 
 ### Fixed
@@ -97,7 +104,8 @@ change. Each marker carries the diagnosis and a `TODO:`; grep the test suite for
 No changelog was kept before this file was introduced; see
 the git history for earlier versions.
 
-[Unreleased]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.2...HEAD
+[Unreleased]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.3...HEAD
+[4.0.3]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.2...v4.0.3
 [4.0.2]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.1...v4.0.2
 [4.0.1]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.0...v4.0.1
 [4.0.0]: https://github.com/marcellodebernardi/loss-landscapes/compare/v3.0.6...v4.0.0

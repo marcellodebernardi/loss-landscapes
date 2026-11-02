@@ -14,9 +14,9 @@ easier, aiding the analysis of the geometry of neural network loss landscapes.
 
 This library does not provide plotting facilities, letting the user define how the data should be plotted.
 
-> **Known limitations:** Some normalisation routines produce incorrect results, gradient evaluation
-> has known defects, and the `contrib` modules cannot be imported. See the strict `xfail` tests
-> for details before relying on affected functionality.
+> **Known limitations:** Some normalisation routines produce incorrect results and gradient
+> evaluation has known defects. See the strict `xfail` tests for details before relying on
+> affected functionality.
 
 ## Quickstart
 
