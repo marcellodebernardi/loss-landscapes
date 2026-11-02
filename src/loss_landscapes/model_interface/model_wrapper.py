@@ -41,10 +41,10 @@ class ModelWrapper(abc.ABC):
         return self
 
     def parameters(self):
-        return itertools.chain([module.parameters() for module in self.modules])
+        return itertools.chain.from_iterable(module.parameters() for module in self.modules)
 
     def named_parameters(self):
-        return itertools.chain([module.named_parameters() for module in self.modules])
+        return itertools.chain.from_iterable(module.named_parameters() for module in self.modules)
 
     @abc.abstractmethod
     def forward(self, x):

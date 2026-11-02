@@ -127,23 +127,32 @@ def test_train_and_eval_propagate_to_every_module(model, other_model):
     assert model.training and other_model.training
 
 
-# TODO: fix ModelWrapper.parameters()/named_parameters(), then drop this marker.
-@pytest.mark.xfail(
-    reason="ModelWrapper.parameters()/named_parameters() call itertools.chain on a list of "
-    "generators instead of chaining the generators themselves, so they yield generator "
-    "objects rather than parameters.",
-    strict=True,
-)
-def test_wrapper_parameters_yields_tensors(model):
-    assert all(isinstance(p, torch.Tensor) for p in wrap_model(model).parameters())
+def test_wrapper_parameters_yields_every_module_parameter_in_order(model, other_model):
+    wrapper = GeneralModelWrapper(None, [model, other_model], lambda m, x: x)
+    expected = [*model.parameters(), *other_model.parameters()]
+
+    actual = list(wrapper.parameters())
+
+    assert len(actual) == len(expected)
+    assert all(a is e for a, e in zip(actual, expected, strict=True))
+
+
+def test_wrapper_named_parameters_yields_every_module_name_and_parameter(model, other_model):
+    wrapper = GeneralModelWrapper(None, [model, other_model], lambda m, x: x)
+    expected = [*model.named_parameters(), *other_model.named_parameters()]
+
+    actual = list(wrapper.named_parameters())
+
+    assert [name for name, _ in actual] == [name for name, _ in expected]
+    assert all(a is e for (_, a), (_, e) in zip(actual, expected, strict=True))
 
 
 # TODO: let LossGradient keep gradients enabled, then drop this marker.
 @pytest.mark.xfail(
     reason="wrap_model() calls requires_grad_(False) on every parameter, so nothing reached "
     "through a wrapper is part of an autograd graph and LossGradient cannot differentiate "
-    "at all. This fires before the named_parameters() defect above is even reached, so both "
-    "have to be fixed before LossGradient works.",
+    "at all. LossGradient also passes (name, parameter) pairs to torch.autograd.grad and "
+    "calls .detach() on the tuple it returns, so all three have to be fixed before it works.",
     strict=True,
     raises=RuntimeError,
 )
