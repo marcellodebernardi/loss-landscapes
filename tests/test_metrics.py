@@ -39,11 +39,68 @@ def test_loss_returns_a_python_float(data, wrapper):
 # --- LossPerturbations -----------------------------------------------------
 
 
-def test_loss_perturbations_returns_one_delta_per_direction(data, wrapper):
+def test_loss_perturbations_returns_a_pair_of_deltas_per_direction(data, wrapper):
     inputs, target = data
     metric = LossPerturbations(torch.nn.MSELoss(), inputs, target, n_directions=5, alpha=0.1)
 
-    assert metric(wrapper).shape == (5,)
+    assert metric(wrapper).shape == (5, 2)
+
+
+def test_loss_perturbations_with_no_directions_is_empty(data, wrapper):
+    inputs, target = data
+    metric = LossPerturbations(torch.nn.MSELoss(), inputs, target, n_directions=0, alpha=0.1)
+
+    assert metric(wrapper).shape == (0, 2)
+
+
+@pytest.fixture
+def quadratic():
+    """A linear model under MSE loss, whose loss is exactly quadratic in its parameters.
+
+    float64 keeps rounding well below the alpha ** 2 scale of the curvature terms.
+    """
+    torch.manual_seed(0)
+    model = torch.nn.Linear(4, 2).double()
+    return model, torch.rand(8, 4, dtype=torch.float64), torch.rand(8, 2, dtype=torch.float64)
+
+
+def _perturbations(quadratic, alpha, n_directions=16, seed=1):
+    model, inputs, target = quadratic
+    torch.manual_seed(seed)
+    return LossPerturbations(torch.nn.MSELoss(), inputs, target, n_directions, alpha)(wrap_model(model))
+
+
+def test_loss_perturbations_curvature_and_slope_scale_with_alpha(quadratic):
+    """With the same directions, the curvature term scales as alpha ** 2 and the slope as alpha.
+
+    The loss is quadratic, so delta_plus + delta_minus = alpha ** 2 * d.H.d and
+    delta_plus - delta_minus = 2 * alpha * grad.d exactly.
+    """
+    large, small = _perturbations(quadratic, alpha=0.1), _perturbations(quadratic, alpha=0.05)
+
+    np.testing.assert_allclose(small.sum(axis=1), large.sum(axis=1) / 4, rtol=1e-6)
+    np.testing.assert_allclose(small[:, 0] - small[:, 1], (large[:, 0] - large[:, 1]) / 2, rtol=1e-6)
+
+
+def test_loss_perturbations_step_has_length_alpha(quadratic):
+    """Each step is a unit direction scaled by alpha.
+
+    |delta_plus - delta_minus| = 2 * alpha * |grad.d|, which is at most 2 * alpha * |grad| when
+    d is a unit vector, with equality only along the gradient.
+    """
+    model, inputs, target = quadratic
+    alpha = 0.1
+    gradient_norm = np.linalg.norm(LossGradient(torch.nn.MSELoss(), inputs, target)(wrap_model(model)))
+
+    deltas = _perturbations(quadratic, alpha=alpha, n_directions=64)
+    slopes = np.abs(deltas[:, 0] - deltas[:, 1]) / (2 * alpha)
+
+    assert slopes.max() <= gradient_norm
+    assert slopes.max() > 0.1 * gradient_norm
+
+
+def test_loss_perturbations_curvature_is_non_negative_for_a_convex_loss(quadratic):
+    assert (_perturbations(quadratic, alpha=0.1).sum(axis=1) >= -1e-12).all()
 
 
 def test_loss_perturbations_restores_the_starting_parameters(model, data, wrapper):

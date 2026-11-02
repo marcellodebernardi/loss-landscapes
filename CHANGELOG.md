@@ -7,6 +7,19 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [4.0.7] - 2026-11-02
+
+### Fixed
+
+- `LossPerturbations` now implements the random-perturbation method of Ahmed et al. (2019).
+  For each direction, drawn uniformly from the unit sphere, it evaluates the loss at
+  `theta + alpha * d` and `theta - alpha * d` and returns the pair of changes from the loss at
+  `theta`, as an array of shape `(n_directions, 2)`. Their sum estimates the curvature along `d`
+  and their difference the slope. Previously `alpha` was ignored, each step was an unscaled,
+  all-positive uniform vector of length roughly `sqrt(n_parameters / 3)`, and only the positive
+  side was evaluated, so the results could not be used to estimate curvature. The docstring now
+  credits the paper's first author.
+
 ## [4.0.6] - 2026-11-02
 
 ### Fixed
@@ -138,7 +151,8 @@ change. Each marker carries the diagnosis and a `TODO:`; grep the test suite for
 No changelog was kept before this file was introduced; see
 the git history for earlier versions.
 
-[Unreleased]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.6...HEAD
+[Unreleased]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.7...HEAD
+[4.0.7]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.6...v4.0.7
 [4.0.6]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.5...v4.0.6
 [4.0.5]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.4...v4.0.5
 [4.0.4]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.3...v4.0.4

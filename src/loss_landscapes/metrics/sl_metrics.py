@@ -11,7 +11,7 @@ import torch
 import torch.autograd
 
 from loss_landscapes.metrics.metric import Metric
-from loss_landscapes.model_interface.model_parameters import ModelParameters, rand_u_like
+from loss_landscapes.model_interface.model_parameters import ModelParameters, rand_n_like
 from loss_landscapes.model_interface.model_wrapper import ModelWrapper
 
 
@@ -70,10 +70,22 @@ class LossGradient(Metric):
 
 
 class LossPerturbations(Metric):
-    """Computes random perturbations in the loss value along a sample or random directions.
-    These perturbations can be used to reason probabilistically about the curvature of a
-    point on the loss landscape, as demonstrated in the paper by Schuurmans et al
-    (https://arxiv.org/abs/1811.11214)."""
+    """Computes the change in loss when the model parameters are perturbed by a small step
+    in either direction along each of a sample of random directions.
+
+    For each direction d, drawn uniformly from the unit sphere, the loss is evaluated at
+    theta + alpha * d and theta - alpha * d, and the changes from the loss at theta are
+    returned as a pair (delta_plus, delta_minus). If the loss is approximately quadratic
+    within distance alpha of theta, then delta_plus - delta_minus estimates 2 * alpha times
+    the directional derivative along d, and delta_plus + delta_minus estimates alpha ** 2
+    times the curvature along d. These can be used to reason probabilistically about the
+    curvature of a point on the loss landscape, as demonstrated by Ahmed et al. (2019)
+    (https://arxiv.org/abs/1811.11214).
+
+    alpha is an absolute distance in parameter space, not a multiple of the parameters'
+    norm, and must be small enough for the quadratic approximation to hold. The model is
+    returned to its starting parameters, up to floating-point rounding, after each evaluation.
+    """
 
     def __init__(self, loss_fn, inputs: torch.Tensor, target: torch.Tensor, n_directions, alpha):
         super().__init__()
@@ -84,22 +96,32 @@ class LossPerturbations(Metric):
         self.alpha = alpha
 
     def __call__(self, model_wrapper: ModelWrapper) -> np.ndarray:
-        # start point and directions
+        """
+        :return: array of shape (n_directions, 2), whose i-th row is (delta_plus, delta_minus)
+            for the i-th random direction
+        """
         start_point = model_wrapper.get_module_parameters()
-        start_loss = self.loss_fn(model_wrapper.forward(self.inputs), self.target).item()
+        start_loss = self._loss(model_wrapper)
 
-        # compute start loss and perturbed losses
         results = []
-        for idx in range(self.n_directions):
-            direction = rand_u_like(start_point)
-            start_point.add_(direction)
+        for _ in range(self.n_directions):
+            # a Gaussian sample scaled to unit length is uniformly distributed on the unit sphere
+            step = rand_n_like(start_point)
+            step.mul_(self.alpha / step.model_norm())
 
-            loss = self.loss_fn(model_wrapper.forward(self.inputs), self.target).item()
-            results.append(loss - start_loss)
+            start_point.add_(step)
+            delta_plus = self._loss(model_wrapper) - start_loss
+            start_point.sub_(step)
+            start_point.sub_(step)
+            delta_minus = self._loss(model_wrapper) - start_loss
+            start_point.add_(step)
 
-            start_point.sub_(direction)
+            results.append((delta_plus, delta_minus))
 
-        return np.array(results)
+        return np.array(results).reshape(self.n_directions, 2)
+
+    def _loss(self, model_wrapper: ModelWrapper) -> float:
+        return self.loss_fn(model_wrapper.forward(self.inputs), self.target).item()
 
 
 # noinspection DuplicatedCode
