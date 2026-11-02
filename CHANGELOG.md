@@ -7,6 +7,15 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [4.0.4] - 2026-11-02
+
+### Fixed
+
+- Model-, layer- and filter-wise norms now take absolute parameter values before raising
+  them to the requested power. L1 and other positive odd-order norms no longer suffer
+  cancellation, negative results or domain errors for negative parameters. Normalisation
+  using these orders now uses the corrected magnitudes; default L2 results are unchanged.
+
 ## [4.0.3] - 2026-11-02
 
 ### Removed
@@ -104,7 +113,8 @@ change. Each marker carries the diagnosis and a `TODO:`; grep the test suite for
 No changelog was kept before this file was introduced; see
 the git history for earlier versions.
 
-[Unreleased]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.3...HEAD
+[Unreleased]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.4...HEAD
+[4.0.4]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.3...v4.0.4
 [4.0.3]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.2...v4.0.3
 [4.0.2]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.1...v4.0.2
 [4.0.1]: https://github.com/marcellodebernardi/loss-landscapes/compare/v4.0.0...v4.0.1

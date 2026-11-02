@@ -262,32 +262,41 @@ class ModelParameters:
 
     def model_norm(self, order=2) -> float:
         """
-        Returns the model-wise L-norm of the tensor.
+        Returns the Lp norm of the model parameters.
+
+        Computes (sum(abs(x)**order))**(1/order) over all model parameters.
+
         :param order: norm order, e.g. 2 for L2 norm
-        :return: L-norm of tensor
+        :return: Lp norm of the model parameters
         """
         # L-n norm of model where we treat the model as a flat other
-        return math.pow(sum([torch.pow(layer, order).sum().item() for layer in self.parameters]), 1.0 / order)
+        return math.pow(sum([torch.pow(layer.abs(), order).sum().item() for layer in self.parameters]), 1.0 / order)
 
     def layer_norm(self, index, order=2) -> float:
         """
-        Returns a list of layer-wise L-norms of the tensor.
-        :param order: norm order, e.g. 2 for L2 norm
+        Returns the Lp norm of the selected layer.
+
+        Computes (sum(abs(x)**order))**(1/order) over the selected layer parameters.
+
         :param index: layer index
-        :return: list of L-norms of layers
+        :param order: norm order, e.g. 2 for L2 norm
+        :return: Lp norm of the selected layer
         """
         # L-n norms of layer where we treat each layer as a flat other
-        return math.pow(torch.pow(self.parameters[index], order).sum().item(), 1.0 / order)
+        return math.pow(torch.pow(self.parameters[index].abs(), order).sum().item(), 1.0 / order)
 
     def filter_norm(self, index, order=2) -> float:
         """
-        Returns a 2D list of filter-wise L-norms of the tensor.
-        :param order: norm order, e.g. 2 for L2 norm
+        Returns the Lp norm of the selected filter.
+
+        Computes (sum(abs(x)**order))**(1/order) over the selected filter parameters.
+
         :param index: tuple with layer index and filter index
-        :return: list of L-norms of filters
+        :param order: norm order, e.g. 2 for L2 norm
+        :return: Lp norm of the selected filter
         """
         # L-n norm of each filter where we treat each layer as a flat other
-        return math.pow(torch.pow(self.parameters[index[0]][index[1]], order).sum().item(), 1.0 / order)
+        return math.pow(torch.pow(self.parameters[index[0]][index[1]].abs(), order).sum().item(), 1.0 / order)
 
     def as_numpy(self) -> np.ndarray:
         """
